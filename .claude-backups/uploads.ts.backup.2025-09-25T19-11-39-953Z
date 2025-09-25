@@ -1,0 +1,274 @@
+import { FastifyPluginAsync } from 'fastify';
+import { z } from 'zod';
+import crypto from 'crypto';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import config from '../config';
+
+// Zod schemas for request validation
+const presignedUrlRequestSchema = z.object({
+  contentType: z.string(),
+  filename: z.string(),
+  filesize: z.number().int().positive(),
+});
+
+export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
+  // Create S3 client for Cloudflare R2
+  const s3Client = new S3Client({
+    region: 'auto',
+    endpoint: `https://${config.cloudflare.accountId}.r2.cloudflarestorage.com`,
+    credentials: {
+      accessKeyId: config.cloudflare.r2AccessKeyId,
+      secretAccessKey: config.cloudflare.r2AccessKeySecret,
+    },
+  });
+
+  // Generate presigned URL for client-side upload
+  fastify.post('/presign', {
+    onRequest: [fastify.authenticate],
+    schema: {
+      body: {
+        type: 'object',
+        required: ['contentType', 'filename', 'filesize'],
+        properties: {
+          contentType: { type: 'string' },
+          filename: { type: 'string' },
+          filesize: { type: 'number' },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const userId = (request.user as { id: string }).id;
+      const { contentType, filename, filesize } = presignedUrlRequestSchema.parse(request.body);
+      
+      // Validate file type
+      const allowedTypes = [
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'image/svg+xml',
+        'application/pdf',
+      ];
+      
+      if (!allowedTypes.includes(contentType)) {
+        return reply.status(400).send({ 
+          message: 'Unsupported file type',
+          allowedTypes,
+        });
+      }
+      
+      // Validate file size
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (filesize > maxSize) {
+        return reply.status(400).send({ 
+          message: `File too large. Maximum size is ${maxSize / 1024 / 1024}MB`,
+          maxSize,
+        });
+      }
+      
+      // Generate a unique file key
+      const fileExtension = filename.split('.').pop() || '';
+      const randomId = crypto.randomBytes(16).toString('hex');
+      const key = `uploads/${userId}/${randomId}.${fileExtension}`;
+      
+      // Create the presigned URL
+      const command = new PutObjectCommand({
+        Bucket: config.cloudflare.r2Bucket,
+        Key: key,
+        ContentType: contentType,
+      });
+      
+      const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // 1 hour
+      
+      // Create a media record in database
+      const media = await fastify.prisma.media.create({
+        data: {
+          r2Key: key,
+          mimeType: contentType,
+          createdById: userId,
+        },
+      });
+      
+      return {
+        mediaId: media.id,
+        presignedUrl,
+        key,
+      };
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({ message: 'Invalid input data', errors: error.errors });
+      }
+      
+      fastify.log.error(error);
+      return reply.status(500).send({ message: 'Failed to generate presigned URL' });
+    }
+  });
+
+  // Update media metadata after upload
+  fastify.patch('/media/:id', {
+    onRequest: [fastify.authenticate],
+    schema: {
+      params: {
+        type: 'object',
+        required: ['id'],
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+        },
+      },
+      body: {
+        type: 'object',
+        properties: {
+          width: { type: 'integer' },
+          height: { type: 'integer' },
+          blurhash: { type: 'string' },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const userId = (request.user as { id: string }).id;
+      const { width, height, blurhash } = request.body as {
+        width?: number;
+        height?: number;
+        blurhash?: string;
+      };
+      
+      // Check if media exists and belongs to user
+      const media = await fastify.prisma.media.findFirst({
+        where: {
+          id,
+          createdById: userId,
+        },
+      });
+      
+      if (!media) {
+        return reply.status(404).send({ 
+          message: 'Media not found or you do not have permission to update it'
+        });
+      }
+      
+      // Update metadata
+      const updatedMedia = await fastify.prisma.media.update({
+        where: { id },
+        data: {
+          width,
+          height,
+          blurhash,
+        },
+      });
+      
+      return updatedMedia;
+    } catch (error) {
+      fastify.log.error(error);
+      return reply.status(500).send({ message: 'Failed to update media metadata' });
+    }
+  });
+
+  // Get media details
+  fastify.get('/media/:id', {
+    schema: {
+      params: {
+        type: 'object',
+        required: ['id'],
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+      
+      const media = await fastify.prisma.media.findUnique({
+        where: { id },
+      });
+      
+      if (!media) {
+        return reply.status(404).send({ message: 'Media not found' });
+      }
+      
+      // Construct public URL for the media
+      // This assumes Cloudflare R2 is configured with a public bucket policy or custom domain
+      const publicUrl = `https://${config.cloudflare.r2Bucket}.r2.dev/${media.r2Key}`;
+      
+      return {
+        ...media,
+        url: publicUrl,
+      };
+    } catch (error) {
+      fastify.log.error(error);
+      return reply.status(500).send({ message: 'Failed to retrieve media' });
+    }
+  });
+
+  // Delete media
+  fastify.delete('/media/:id', {
+    onRequest: [fastify.authenticate],
+    schema: {
+      params: {
+        type: 'object',
+        required: ['id'],
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const userId = (request.user as { id: string }).id;
+      
+      // Check if media exists and belongs to user
+      const media = await fastify.prisma.media.findFirst({
+        where: {
+          id,
+          createdById: userId,
+        },
+      });
+      
+      if (!media) {
+        return reply.status(404).send({ 
+          message: 'Media not found or you do not have permission to delete it'
+        });
+      }
+      
+      // Check if media is in use
+      const inUseAsAvatar = await fastify.prisma.user.findFirst({
+        where: { avatarMediaId: id },
+      });
+      
+      const inUseAsEventCover = await fastify.prisma.event.findFirst({
+        where: { coverMediaId: id },
+      });
+      
+      if (inUseAsAvatar || inUseAsEventCover) {
+        return reply.status(400).send({ 
+          message: 'Cannot delete media that is in use'
+        });
+      }
+      
+      // Delete from database
+      await fastify.prisma.media.delete({
+        where: { id },
+      });
+      
+      // Delete from R2 (async, don't wait for it)
+      s3Client.send(
+        new PutObjectCommand({
+          Bucket: config.cloudflare.r2Bucket,
+          Key: media.r2Key,
+        })
+      ).catch(err => {
+        fastify.log.error(`Failed to delete object from R2: ${err.message}`);
+      });
+      
+      return reply.status(204).send();
+    } catch (error) {
+      fastify.log.error(error);
+      return reply.status(500).send({ message: 'Failed to delete media' });
+    }
+  });
+};

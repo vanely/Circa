@@ -1,0 +1,23 @@
+{
+  "name": "circa",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel -r dev",
+    "build": "pnpm --parallel -r build",
+    "start": "pnpm --parallel -r start",
+    "lint": "pnpm --parallel -r lint",
+    "test": "pnpm --parallel -r test",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "clean": "pnpm -r --parallel exec rimraf dist node_modules .turbo"
+  },
+  "devDependencies": {
+    "@types/node": "^20.9.0",
+    "prettier": "^3.0.3",
+    "rimraf": "^5.0.5",
+    "typescript": "^5.2.2"
+  }
+}

@@ -1,0 +1,9 @@
+import { createApp } from './app';
+import config from './config';
+
+const start = async () => {
+  const app = await createApp();
+
+  try {
+    await app.listen({ 
+      port: config

@@ -1,0 +1,413 @@
+import { FastifyPluginAsync } from 'fastify';
+import { z } from 'zod';
+
+// Zod schemas for request validation
+const createCollectibleSchema = z.object({
+  eventId: z.string().uuid(),
+  type: z.enum(['avatar', 'banner', 'badge']),
+  mediaId: z.string().uuid(),
+  rarity: z.string().optional(),
+});
+
+export const collectibleRoutes: FastifyPluginAsync = async (fastify) => {
+  // Create a new collectible
+  fastify.post('/', {
+    onRequest: [fastify.authenticate],
+    schema: {
+      body: {
+        type: 'object',
+        required: ['eventId', 'type', 'mediaId'],
+        properties: {
+          eventId: { type: 'string', format: 'uuid' },
+          type: { type: 'string', enum: ['avatar', 'banner', 'badge'] },
+          mediaId: { type: 'string', format: 'uuid' },
+          rarity: { type: 'string' },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const userId = (request.user as { id: string }).id;
+      const collectibleData = createCollectibleSchema.parse(request.body);
+      
+      // Check if event exists and user is the organizer
+      const event = await fastify.prisma.event.findUnique({
+        where: { id: collectibleData.eventId },
+        include: {
+          organizer: true,
+        },
+      });
+      
+      if (!event) {
+        return reply.status(404).send({ message: 'Event not found' });
+      }
+      
+      // Check if user is the organizer
+      const organizerProfile = await fastify.prisma.organizerProfile.findUnique({
+        where: { userId },
+      });
+      
+      if (!organizerProfile || organizerProfile.id !== event.organizerId) {
+        return reply.status(403).send({ 
+          message: 'Only the event organizer can create collectibles' 
+        });
+      }
+      
+      // Check if media exists
+      const media = await fastify.prisma.media.findUnique({
+        where: { id: collectibleData.mediaId },
+      });
+      
+      if (!media) {
+        return reply.status(404).send({ message: 'Media not found' });
+      }
+      
+      // Create collectible
+      const collectible = await fastify.prisma.collectible.create({
+        data: {
+          eventId: collectibleData.eventId,
+          type: collectibleData.type,
+          mediaId: collectibleData.mediaId,
+          rarity: collectibleData.rarity,
+        },
+        include: {
+          media: true,
+        },
+      });
+      
+      return reply.status(201).send(collectible);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({ message: 'Invalid input data', errors: error.errors });
+      }
+      
+      fastify.log.error(error);
+      return reply.status(500).send({ message: 'Failed to create collectible' });
+    }
+  });
+
+  // Get collectibles for an event
+  fastify.get('/event/:eventId', {
+    schema: {
+      params: {
+        type: 'object',
+        required: ['eventId'],
+        properties: {
+          eventId: { type: 'string', format: 'uuid' },
+        },
+      },
+      querystring: {
+        type: 'object',
+        properties: {
+          type: { type: 'string', enum: ['avatar', 'banner', 'badge'] },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const { eventId } = request.params as { eventId: string };
+      const { type } = request.query as { type?: 'avatar' | 'banner' | 'badge' };
+      
+      // Check if event exists
+      const event = await fastify.prisma.event.findUnique({
+        where: { id: eventId },
+      });
+      
+      if (!event) {
+        return reply.status(404).send({ message: 'Event not found' });
+      }
+      
+      // Get collectibles
+      const where: any = { eventId };
+      if (type) {
+        where.type = type;
+      }
+      
+      const collectibles = await fastify.prisma.collectible.findMany({
+        where,
+        include: {
+          media: true,
+          _count: {
+            select: {
+              userCollectibles: true,
+            },
+          },
+        },
+      });
+      
+      // Format collectibles with media URLs
+      const formattedCollectibles = collectibles.map(collectible => ({
+        id: collectible.id,
+        eventId: collectible.eventId,
+        type: collectible.type,
+        rarity: collectible.rarity,
+        media: {
+          id: collectible.media.id,
+          mimeType: collectible.media.mimeType,
+          width: collectible.media.width,
+          height: collectible.media.height,
+          blurhash: collectible.media.blurhash,
+          url: `https://${fastify.config.cloudflare.r2Bucket}.r2.dev/${collectible.media.r2Key}`,
+        },
+        userCount: collectible._count.userCollectibles,
+      }));
+      
+      return { collectibles: formattedCollectibles };
+    } catch (error) {
+      fastify.log.error(error);
+      return reply.status(500).send({ message: 'Failed to retrieve collectibles' });
+    }
+  });
+
+  // Award collectible to user
+  fastify.post('/:id/award', {
+    onRequest: [fastify.authenticate],
+    schema: {
+      params: {
+        type: 'object',
+        required: ['id'],
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+        },
+      },
+      body: {
+        type: 'object',
+        required: ['userId'],
+        properties: {
+          userId: { type: 'string', format: 'uuid' },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const { id: collectibleId } = request.params as { id: string };
+      const { userId: targetUserId } = request.body as { userId: string };
+      const authUserId = (request.user as { id: string }).id;
+      
+      // Check if collectible exists
+      const collectible = await fastify.prisma.collectible.findUnique({
+        where: { id: collectibleId },
+        include: {
+          event: {
+            include: {
+              organizer: true,
+            },
+          },
+        },
+      });
+      
+      if (!collectible) {
+        return reply.status(404).send({ message: 'Collectible not found' });
+      }
+      
+      // Check if user is the organizer
+      const organizerProfile = await fastify.prisma.organizerProfile.findUnique({
+        where: { userId: authUserId },
+      });
+      
+      if (!organizerProfile || organizerProfile.id !== collectible.event.organizerId) {
+        return reply.status(403).send({ 
+          message: 'Only the event organizer can award collectibles' 
+        });
+      }
+      
+      // Check if target user exists
+      const targetUser = await fastify.prisma.user.findUnique({
+        where: { id: targetUserId },
+      });
+      
+      if (!targetUser) {
+        return reply.status(404).send({ message: 'User not found' });
+      }
+      
+      // Check if user already has this collectible
+      const existing = await fastify.prisma.userCollectible.findUnique({
+        where: {
+          userId_collectibleId: {
+            userId: targetUserId,
+            collectibleId,
+          },
+        },
+      });
+      
+      if (existing) {
+        return reply.status(409).send({ message: 'User already has this collectible' });
+      }
+      
+      // Award collectible
+      await fastify.prisma.userCollectible.create({
+        data: {
+          userId: targetUserId,
+          collectibleId,
+        },
+      });
+      
+      return {
+        message: 'Collectible awarded successfully',
+      };
+    } catch (error) {
+      fastify.log.error(error);
+      return reply.status(500).send({ message: 'Failed to award collectible' });
+    }
+  });
+
+  // Claim a collectible
+  fastify.post('/:id/claim', {
+    onRequest: [fastify.authenticate],
+    schema: {
+      params: {
+        type: 'object',
+        required: ['id'],
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const { id: collectibleId } = request.params as { id: string };
+      const userId = (request.user as { id: string }).id;
+      
+      // Check if collectible exists
+      const collectible = await fastify.prisma.collectible.findUnique({
+        where: { id: collectibleId },
+        include: {
+          event: true,
+        },
+      });
+      
+      if (!collectible) {
+        return reply.status(404).send({ message: 'Collectible not found' });
+      }
+      
+      // Check if user has RSVP'd to the event
+      const ticket = await fastify.prisma.ticket.findUnique({
+        where: {
+          eventId_userId: {
+            eventId: collectible.eventId,
+            userId,
+          },
+        },
+      });
+      
+      if (!ticket || ticket.status !== 'going') {
+        return reply.status(403).send({ 
+          message: 'You must RSVP to this event to claim collectibles' 
+        });
+      }
+      
+      // Check if user already has this collectible
+      const existing = await fastify.prisma.userCollectible.findUnique({
+        where: {
+          userId_collectibleId: {
+            userId,
+            collectibleId,
+          },
+        },
+      });
+      
+      if (existing) {
+        return reply.status(409).send({ message: 'You already have this collectible' });
+      }
+      
+      // Award collectible
+      await fastify.prisma.userCollectible.create({
+        data: {
+          userId,
+          collectibleId,
+        },
+      });
+      
+      return {
+        message: 'Collectible claimed successfully',
+      };
+    } catch (error) {
+      fastify.log.error(error);
+      return reply.status(500).send({ message: 'Failed to claim collectible' });
+    }
+  });
+
+  // Get user's collectibles
+  fastify.get('/user/:userId', {
+    schema: {
+      params: {
+        type: 'object',
+        required: ['userId'],
+        properties: {
+          userId: { type: 'string', format: 'uuid' },
+        },
+      },
+      querystring: {
+        type: 'object',
+        properties: {
+          type: { type: 'string', enum: ['avatar', 'banner', 'badge'] },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const { userId } = request.params as { userId: string };
+      const { type } = request.query as { type?: 'avatar' | 'banner' | 'badge' };
+      
+      // Check if user exists
+      const user = await fastify.prisma.user.findUnique({
+        where: { id: userId },
+      });
+      
+      if (!user) {
+        return reply.status(404).send({ message: 'User not found' });
+      }
+      
+      // Get collectibles
+      const userCollectibles = await fastify.prisma.userCollectible.findMany({
+        where: { userId },
+        include: {
+          collectible: {
+            include: {
+              media: true,
+              event: {
+                select: {
+                  id: true,
+                  title: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          acquiredAt: 'desc',
+        },
+      });
+      
+      // Filter by type if requested
+      const filteredCollectibles = type 
+        ? userCollectibles.filter(uc => uc.collectible.type === type) 
+        : userCollectibles;
+      
+      // Format collectibles with media URLs
+      const formattedCollectibles = filteredCollectibles.map(uc => ({
+        id: uc.collectible.id,
+        type: uc.collectible.type,
+        rarity: uc.collectible.rarity,
+        acquiredAt: uc.acquiredAt,
+        media: {
+          id: uc.collectible.media.id,
+          mimeType: uc.collectible.media.mimeType,
+          width: uc.collectible.media.width,
+          height: uc.collectible.media.height,
+          blurhash: uc.collectible.media.blurhash,
+          url: `https://${fastify.config.cloudflare.r2Bucket}.r2.dev/${uc.collectible.media.r2Key}`,
+        },
+        event: {
+          id: uc.collectible.event.id,
+          title: uc.collectible.event.title,
+        },
+      }));
+      
+      return { collectibles: formattedCollectibles };
+    } catch (error) {
+      fastify.log.error(error);
+      return reply.status(500).send({ message: 'Failed to retrieve collectibles' });
+    }
+  });
+};

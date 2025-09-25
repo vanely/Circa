@@ -1,0 +1,102 @@
+import Fastify, { FastifyInstance } from 'fastify';
+import cors from '@fastify/cors';
+import jwt from '@fastify/jwt';
+import multipart from '@fastify/multipart';
+import websocket from '@fastify/websocket';
+import swagger from '@fastify/swagger';
+import config from './config';
+
+// Routes
+import { authRoutes } from './routes/auth';
+import { userRoutes } from './routes/users';
+import { eventRoutes } from './routes/events';
+import { venueRoutes } from './routes/venues';
+import { ticketRoutes } from './routes/tickets';
+import { uploadRoutes } from './routes/uploads';
+import { messageRoutes } from './routes/messages';
+import { collectibleRoutes } from './routes/collectibles';
+
+// Plugins
+import { prismaPlugin } from './plugins/prisma';
+
+// Controllers and Services
+import { createControllers, ControllerRegistry } from './controllers';
+import { createServices, ServiceRegistry } from './services';
+
+// Extend FastifyInstance to include controllers and services
+declare module 'fastify' {
+  interface FastifyInstance {
+    controllers: ControllerRegistry;
+    services: ServiceRegistry;
+    config: typeof config;
+  }
+}
+
+export async function createApp(): Promise<FastifyInstance> {
+  const app = Fastify({
+    logger: {
+      transport: config.env === 'development'
+        ? {
+            target: 'pino-pretty',
+            options: {
+              translateTime: 'HH:MM:ss Z',
+              ignore: 'pid,hostname',
+            },
+          }
+        : undefined,
+    },
+  });
+
+  // Register plugins
+  await app.register(cors, config.cors);
+  await app.register(jwt, { secret: config.jwt.secret });
+  await app.register(multipart);
+  await app.register(websocket);
+  await app.register(prismaPlugin);
+  
+  // Add config to fastify instance
+  app.decorate('config', config);
+  
+  // Swagger documentation
+  await app.register(swagger, {
+    routePrefix: '/docs',
+    swagger: {
+      info: {
+        title: 'Circa API',
+        description: 'API for the Circa event platform',
+        version: '0.1.0',
+      },
+    },
+    exposeRoute: true,
+  });
+
+  // Register authentication check decorator
+  app.decorate('authenticate', async (request: any, reply: any) => {
+    try {
+      await request.jwtVerify();
+    } catch (err) {
+      reply.status(401).send({ message: 'Unauthorized' });
+    }
+  });
+
+  // Initialize controllers
+  const controllers = createControllers(app);
+  app.decorate('controllers', controllers);
+  
+  // Register routes
+  app.register(authRoutes, { prefix: '/api/auth' });
+  app.register(userRoutes, { prefix: '/api/users' });
+  app.register(eventRoutes, { prefix: '/api/events' });
+  app.register(venueRoutes, { prefix: '/api/venues' });
+  app.register(ticketRoutes, { prefix: '/api/tickets' });
+  app.register(uploadRoutes, { prefix: '/api/uploads' });
+  app.register(messageRoutes, { prefix: '/api/messages' });
+  app.register(collectibleRoutes, { prefix: '/api/collectibles' });
+
+  // Root health check
+  app.get('/health', async () => {
+    return { status: 'ok', timestamp: new Date().toISOString() };
+  });
+
+  return app;
+}

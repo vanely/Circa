@@ -1,0 +1,662 @@
+import { FastifyPluginAsync } from 'fastify';
+import { z } from 'zod';
+
+// Zod schemas for request validation
+const createTicketTypeSchema = z.object({
+  name: z.string().min(1).max(100),
+  kind: z.enum(['free', 'paid', 'donation', 'approval']),
+  priceCents: z.number().int().optional(),
+  capacity: z.number().int().positive().optional(),
+  section: z.string().optional(),
+  salesStart: z.string().transform(val => new Date(val)).optional(),
+  salesEnd: z.string().transform(val => new Date(val)).optional(),
+});
+
+const checkInSchema = z.object({
+  method: z.enum(['qr', 'manual', 'import']).default('manual'),
+});
+
+export const ticketRoutes: FastifyPluginAsync = async (fastify) => {
+  // Get my tickets (current user)
+  fastify.get('/me', {
+    onRequest: [fastify.authenticate],
+    schema: {
+      querystring: {
+        type: 'object',
+        properties: {
+          status: { type: 'string', enum: ['going', 'maybe', 'waitlist', 'not_going'] },
+          upcoming: { type: 'boolean', default: true },
+          limit: { type: 'integer', default: 10 },
+          offset: { type: 'integer', default: 0 },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const userId = (request.user as { id: string }).id;
+      const { 
+        status, 
+        upcoming = true, 
+        limit = 10, 
+        offset = 0 
+      } = request.query as any;
+      
+      // Build where clause
+      const where: any = { userId };
+      
+      // Filter by status if provided
+      if (status) {
+        where.status = status;
+      } else {
+        where.status = { in: ['going', 'maybe', 'waitlist'] };
+      }
+      
+      // Get tickets with event info
+      const tickets = await fastify.prisma.ticket.findMany({
+        where,
+        include: {
+          event: {
+            include: {
+              venue: true,
+              coverMedia: true,
+              organizer: {
+                include: {
+                  user: {
+                    select: {
+                      displayName: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          ticketType: true,
+        },
+        skip: offset,
+        take: limit,
+        orderBy: [
+          {
+            event: {
+              startAt: 'asc',
+            },
+          },
+        ],
+      });
+      
+      // Filter for upcoming events if requested
+      const now = new Date();
+      const filteredTickets = upcoming
+        ? tickets.filter(ticket => ticket.event.startAt >= now)
+        : tickets;
+      
+      // Format response
+      const formattedTickets = filteredTickets.map(ticket => ({
+        id: ticket.id,
+        status: ticket.status,
+        plusOnes: ticket.plusOnes,
+        createdAt: ticket.createdAt,
+        ticketType: ticket.ticketType,
+        event: {
+          id: ticket.event.id,
+          title: ticket.event.title,
+          startAt: ticket.event.startAt,
+          endAt: ticket.event.endAt,
+          timezone: ticket.event.timezone,
+          venue: ticket.event.venue,
+          coverMedia: ticket.event.coverMedia,
+          organizer: {
+            id: ticket.event.organizer.id,
+            brandName: ticket.event.organizer.brandName,
+            displayName: ticket.event.organizer.user.displayName,
+          },
+        },
+      }));
+      
+      // Get total count
+      const total = await fastify.prisma.ticket.count({ where });
+      
+      return {
+        tickets: formattedTickets,
+        meta: {
+          total,
+          limit,
+          offset,
+        },
+      };
+    } catch (error) {
+      fastify.log.error(error);
+      return reply.status(500).send({ message: 'Failed to retrieve tickets' });
+    }
+  });
+
+  // Create ticket type for an event
+  fastify.post('/types', {
+    onRequest: [fastify.authenticate],
+    schema: {
+      body: {
+        type: 'object',
+        required: ['eventId', 'name', 'kind'],
+        properties: {
+          eventId: { type: 'string', format: 'uuid' },
+          name: { type: 'string' },
+          kind: { type: 'string', enum: ['free', 'paid', 'donation', 'approval'] },
+          priceCents: { type: 'integer' },
+          capacity: { type: 'integer' },
+          section: { type: 'string' },
+          salesStart: { type: 'string', format: 'date-time' },
+          salesEnd: { type: 'string', format: 'date-time' },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const userId = (request.user as { id: string }).id;
+      const { eventId, ...ticketTypeData } = request.body as any;
+      
+      // Validate with Zod schema
+      const validatedData = createTicketTypeSchema.parse(ticketTypeData);
+      
+      // Check if event exists
+      const event = await fastify.prisma.event.findUnique({
+        where: { id: eventId },
+        include: {
+          organizer: true,
+        },
+      });
+      
+      if (!event) {
+        return reply.status(404).send({ message: 'Event not found' });
+      }
+      
+      // Check if user is the organizer
+      const organizerProfile = await fastify.prisma.organizerProfile.findUnique({
+        where: { userId },
+      });
+      
+      if (!organizerProfile || organizerProfile.id !== event.organizerId) {
+        return reply.status(403).send({ 
+          message: 'You do not have permission to create ticket types for this event'
+        });
+      }
+      
+      // Validate paid ticket type has a price
+      if (validatedData.kind === 'paid' && !validatedData.priceCents) {
+        return reply.status(400).send({ 
+          message: 'Paid tickets must have a price' 
+        });
+      }
+      
+      // Create ticket type
+      const ticketType = await fastify.prisma.ticketType.create({
+        data: {
+          eventId,
+          ...validatedData,
+        },
+      });
+      
+      // Update event price range if this is a paid ticket
+      if (validatedData.kind === 'paid' && validatedData.priceCents) {
+        const priceCents = validatedData.priceCents;
+        
+        // Get current min/max price
+        const currentPrices = await fastify.prisma.ticketType.findMany({
+          where: {
+            eventId,
+            kind: 'paid',
+            priceCents: { not: null },
+          },
+          select: {
+            priceCents: true,
+          },
+        });
+        
+        const prices = currentPrices
+          .map(t => t.priceCents as number)
+          .filter(price => price > 0);
+        
+        if (prices.length > 0) {
+          const minPrice = Math.min(...prices);
+          const maxPrice = Math.max(...prices);
+          
+          await fastify.prisma.event.update({
+            where: { id: eventId },
+            data: {
+              priceMinCents: minPrice,
+              priceMaxCents: maxPrice !== minPrice ? maxPrice : undefined,
+            },
+          });
+        }
+      }
+      
+      return reply.status(201).send(ticketType);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({ message: 'Invalid input data', errors: error.errors });
+      }
+      
+      fastify.log.error(error);
+      return reply.status(500).send({ message: 'Failed to create ticket type' });
+    }
+  });
+
+  // Update a ticket type
+  fastify.patch('/types/:id', {
+    onRequest: [fastify.authenticate],
+    schema: {
+      params: {
+        type: 'object',
+        required: ['id'],
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const userId = (request.user as { id: string }).id;
+      const updates = createTicketTypeSchema.partial().parse(request.body);
+      
+      // Get ticket type with event
+      const ticketType = await fastify.prisma.ticketType.findUnique({
+        where: { id },
+        include: {
+          event: {
+            include: {
+              organizer: true,
+            },
+          },
+        },
+      });
+      
+      if (!ticketType) {
+        return reply.status(404).send({ message: 'Ticket type not found' });
+      }
+      
+      // Check if user is the organizer
+      const organizerProfile = await fastify.prisma.organizerProfile.findUnique({
+        where: { userId },
+      });
+      
+      if (!organizerProfile || organizerProfile.id !== ticketType.event.organizerId) {
+        return reply.status(403).send({ 
+          message: 'You do not have permission to update this ticket type'
+        });
+      }
+      
+      // Update ticket type
+      const updatedTicketType = await fastify.prisma.ticketType.update({
+        where: { id },
+        data: updates,
+      });
+      
+      // Update event price range if this is a paid ticket and price was updated
+      if (updates.priceCents && (ticketType.kind === 'paid' || updates.kind === 'paid')) {
+        const eventId = ticketType.eventId;
+        
+        // Get current min/max price
+        const currentPrices = await fastify.prisma.ticketType.findMany({
+          where: {
+            eventId,
+            kind: 'paid',
+            priceCents: { not: null },
+          },
+          select: {
+            priceCents: true,
+          },
+        });
+        
+        const prices = currentPrices
+          .map(t => t.priceCents as number)
+          .filter(price => price > 0);
+        
+        if (prices.length > 0) {
+          const minPrice = Math.min(...prices);
+          const maxPrice = Math.max(...prices);
+          
+          await fastify.prisma.event.update({
+            where: { id: eventId },
+            data: {
+              priceMinCents: minPrice,
+              priceMaxCents: maxPrice !== minPrice ? maxPrice : undefined,
+            },
+          });
+        } else {
+          // No more paid tickets
+          await fastify.prisma.event.update({
+            where: { id: eventId },
+            data: {
+              priceMinCents: null,
+              priceMaxCents: null,
+            },
+          });
+        }
+      }
+      
+      return updatedTicketType;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({ message: 'Invalid input data', errors: error.errors });
+      }
+      
+      fastify.log.error(error);
+      return reply.status(500).send({ message: 'Failed to update ticket type' });
+    }
+  });
+
+  // Delete a ticket type
+  fastify.delete('/types/:id', {
+    onRequest: [fastify.authenticate],
+    schema: {
+      params: {
+        type: 'object',
+        required: ['id'],
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string };
+      const userId = (request.user as { id: string }).id;
+      
+      // Get ticket type with event
+      const ticketType = await fastify.prisma.ticketType.findUnique({
+        where: { id },
+        include: {
+          event: {
+            include: {
+              organizer: true,
+            },
+          },
+        },
+      });
+      
+      if (!ticketType) {
+        return reply.status(404).send({ message: 'Ticket type not found' });
+      }
+      
+      // Check if user is the organizer
+      const organizerProfile = await fastify.prisma.organizerProfile.findUnique({
+        where: { userId },
+      });
+      
+      if (!organizerProfile || organizerProfile.id !== ticketType.event.organizerId) {
+        return reply.status(403).send({ 
+          message: 'You do not have permission to delete this ticket type'
+        });
+      }
+      
+      // Check if this is the only ticket type for the event
+      const ticketTypeCount = await fastify.prisma.ticketType.count({
+        where: { eventId: ticketType.eventId },
+      });
+      
+      if (ticketTypeCount <= 1) {
+        return reply.status(400).send({ 
+          message: 'Cannot delete the only ticket type for an event'
+        });
+      }
+      
+      // Delete ticket type
+      await fastify.prisma.ticketType.delete({
+        where: { id },
+      });
+      
+      // Update event price range if this was a paid ticket
+      if (ticketType.kind === 'paid' && ticketType.priceCents) {
+        const eventId = ticketType.eventId;
+        
+        // Get current min/max price
+        const currentPrices = await fastify.prisma.ticketType.findMany({
+          where: {
+            eventId,
+            kind: 'paid',
+            priceCents: { not: null },
+          },
+          select: {
+            priceCents: true,
+          },
+        });
+        
+        const prices = currentPrices
+          .map(t => t.priceCents as number)
+          .filter(price => price > 0);
+        
+        if (prices.length > 0) {
+          const minPrice = Math.min(...prices);
+          const maxPrice = Math.max(...prices);
+          
+          await fastify.prisma.event.update({
+            where: { id: eventId },
+            data: {
+              priceMinCents: minPrice,
+              priceMaxCents: maxPrice !== minPrice ? maxPrice : undefined,
+            },
+          });
+        } else {
+          // No more paid tickets
+          await fastify.prisma.event.update({
+            where: { id: eventId },
+            data: {
+              priceMinCents: null,
+              priceMaxCents: null,
+            },
+          });
+        }
+      }
+      
+      return reply.status(204).send();
+    } catch (error) {
+      fastify.log.error(error);
+      return reply.status(500).send({ message: 'Failed to delete ticket type' });
+    }
+  });
+
+  // Check in an attendee
+  fastify.post('/check-in/:ticketId', {
+    onRequest: [fastify.authenticate],
+    schema: {
+      params: {
+        type: 'object',
+        required: ['ticketId'],
+        properties: {
+          ticketId: { type: 'string', format: 'uuid' },
+        },
+      },
+      body: {
+        type: 'object',
+        properties: {
+          method: { type: 'string', enum: ['qr', 'manual', 'import'] },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const { ticketId } = request.params as { ticketId: string };
+      const authUserId = (request.user as { id: string }).id;
+      const { method = 'manual' } = checkInSchema.parse(request.body);
+      
+      // Get ticket with event and user info
+      const ticket = await fastify.prisma.ticket.findUnique({
+        where: { id: ticketId },
+        include: {
+          event: {
+            include: {
+              organizer: true,
+            },
+          },
+          user: true,
+        },
+      });
+      
+      if (!ticket) {
+        return reply.status(404).send({ message: 'Ticket not found' });
+      }
+      
+      // Check if ticket status is 'going'
+      if (ticket.status !== 'going') {
+        return reply.status(400).send({ message: 'Cannot check in a non-going ticket' });
+      }
+      
+      // Check if user has permission to check in attendees for this event
+      // For now, only organizer can check in attendees
+      const organizerProfile = await fastify.prisma.organizerProfile.findUnique({
+        where: { userId: authUserId },
+      });
+      
+      if (!organizerProfile || organizerProfile.id !== ticket.event.organizerId) {
+        return reply.status(403).send({ 
+          message: 'You do not have permission to check in attendees for this event'
+        });
+      }
+      
+      // Check if already checked in
+      const existingCheckin = await fastify.prisma.checkin.findFirst({
+        where: {
+          eventId: ticket.eventId,
+          userId: ticket.userId,
+        },
+      });
+      
+      if (existingCheckin) {
+        return reply.status(409).send({ 
+          message: 'Attendee already checked in',
+          checkin: existingCheckin,
+        });
+      }
+      
+      // Create check-in record
+      const checkin = await fastify.prisma.checkin.create({
+        data: {
+          eventId: ticket.eventId,
+          userId: ticket.userId,
+          method,
+        },
+        include: {
+          user: {
+            select: {
+              displayName: true,
+              avatarMediaId: true,
+            },
+          },
+        },
+      });
+      
+      return {
+        checkin,
+        user: {
+          id: ticket.user.id,
+          displayName: ticket.user.displayName,
+          avatarMediaId: ticket.user.avatarMediaId,
+        },
+      };
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return reply.status(400).send({ message: 'Invalid input data', errors: error.errors });
+      }
+      
+      fastify.log.error(error);
+      return reply.status(500).send({ message: 'Failed to check in attendee' });
+    }
+  });
+
+  // Get check-ins for an event
+  fastify.get('/check-ins/:eventId', {
+    onRequest: [fastify.authenticate],
+    schema: {
+      params: {
+        type: 'object',
+        required: ['eventId'],
+        properties: {
+          eventId: { type: 'string', format: 'uuid' },
+        },
+      },
+      querystring: {
+        type: 'object',
+        properties: {
+          limit: { type: 'integer', default: 50 },
+          offset: { type: 'integer', default: 0 },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    try {
+      const { eventId } = request.params as { eventId: string };
+      const userId = (request.user as { id: string }).id;
+      const { limit = 50, offset = 0 } = request.query as any;
+      
+      // Verify user has permission to view check-ins
+      const organizerProfile = await fastify.prisma.organizerProfile.findUnique({
+        where: { userId },
+      });
+      
+      if (!organizerProfile) {
+        return reply.status(403).send({ 
+          message: 'Only event organizers can view check-ins'
+        });
+      }
+      
+      // Check if this user is the organizer for this event
+      const event = await fastify.prisma.event.findFirst({
+        where: {
+          id: eventId,
+          organizerId: organizerProfile.id,
+        },
+      });
+      
+      if (!event) {
+        return reply.status(403).send({ 
+          message: 'You do not have permission to view check-ins for this event'
+        });
+      }
+      
+      // Get check-ins
+      const checkins = await fastify.prisma.checkin.findMany({
+        where: { eventId },
+        include: {
+          user: {
+            select: {
+              displayName: true,
+              email: true,
+              avatarMediaId: true,
+            },
+          },
+        },
+        orderBy: {
+          at: 'desc',
+        },
+        skip: offset,
+        take: limit,
+      });
+      
+      // Get total count
+      const total = await fastify.prisma.checkin.count({ 
+        where: { eventId } 
+      });
+      
+      // Get expected attendee count
+      const expectedCount = await fastify.prisma.ticket.count({
+        where: {
+          eventId,
+          status: 'going',
+        },
+      });
+      
+      return {
+        checkins,
+        meta: {
+          total,
+          limit,
+          offset,
+          expectedCount,
+          checkInRate: expectedCount > 0 ? total / expectedCount : 0,
+        },
+      };
+    } catch (error) {
+      fastify.log.error(error);
+      return reply.status(500).send({ message: 'Failed to retrieve check-ins' });
+    }
+  });
+};

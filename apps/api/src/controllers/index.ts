@@ -1,0 +1,59 @@
+import { FastifyInstance } from 'fastify';
+import { PrismaClient } from '@prisma/client';
+
+// Import controllers
+import { AuthController } from './auth.controller';
+import { UserController } from './user.controller';
+import { EventController } from './event.controller';
+import { UploadController } from './upload.controller';
+import { WebSocketController } from './websocket.controller';
+import { MessageController } from './message.controller';
+import { TicketController } from './ticket.controller';
+import { VenueController } from './venue.controller';
+import { CollectibleController } from './collectible.controller';
+
+// Controller registry type
+export interface ControllerRegistry {
+  auth: AuthController;
+  user: UserController;
+  event: EventController;
+  upload: UploadController;
+  websocket: WebSocketController;
+  message: MessageController;
+  ticket: TicketController;
+  venue: VenueController;
+  collectible: CollectibleController;
+}
+
+/**
+ * Factory function to create and initialize all controllers
+ */
+export function createControllers(fastify: FastifyInstance): ControllerRegistry {
+  const prisma: PrismaClient = fastify.prisma;
+  
+  // Create WebSocket controller first, as other controllers may depend on it
+  const websocketController = new WebSocketController(fastify, prisma);
+  
+  // Create and initialize all controllers
+  const controllers: ControllerRegistry = {
+    auth: new AuthController(prisma),
+    user: new UserController(prisma),
+    event: new EventController(prisma),
+    upload: new UploadController(prisma),
+    websocket: websocketController,
+    message: new MessageController(prisma, websocketController),
+    // Initialize other controllers here
+  };
+  
+  return controllers;
+}
+
+// Export controller types
+export type { 
+  AuthController,
+  UserController,
+  EventController,
+  UploadController,
+  WebSocketController,
+  MessageController
+};
