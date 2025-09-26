@@ -2,10 +2,10 @@ services:
   postgres:
     image: postgis/postgis:15-3.4
     container_name: circa-postgres-dev
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: circa
+    # environment:
+    #   POSTGRES_USER: postgres
+    #   POSTGRES_PASSWORD: postgres
+    #   POSTGRES_DB: circa
     volumes:
       - postgres-data:/var/lib/postgresql/data
     ports:
@@ -19,22 +19,24 @@ services:
       - circa-dev-network
 
   backend:
+    env_file:
+      - ../apps/backend/.env.development
     build:
       context: ..
       dockerfile: docker/backend.Dockerfile
       tags:
         - circa-backend-dev
     container_name: circa-backend-dev
-    environment:
-      NODE_ENV: development
-      PORT: 3333
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/circa
-      JWT_SECRET: ${JWT_SECRET:-supersecret-dev-only}
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
-      CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID}
-      CLOUDFLARE_R2_BUCKET: ${CLOUDFLARE_R2_BUCKET:-circa}
-      CLOUDFLARE_R2_ACCESS_KEY_ID: ${CLOUDFLARE_R2_ACCESS_KEY_ID}
-      CLOUDFLARE_R2_ACCESS_KEY_SECRET: ${CLOUDFLARE_R2_ACCESS_KEY_SECRET}
+    # environment:
+    #   NODE_ENV: development
+    #   PORT: 3333
+    #   DATABASE_URL: postgresql://postgres:postgres@postgres:5432/circa
+    #   JWT_SECRET: ${JWT_SECRET:-supersecret-dev-only}
+    #   CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+    #   CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID}
+    #   CLOUDFLARE_R2_BUCKET: ${CLOUDFLARE_R2_BUCKET:-circa}
+    #   CLOUDFLARE_R2_ACCESS_KEY_ID: ${CLOUDFLARE_R2_ACCESS_KEY_ID}
+    #   CLOUDFLARE_R2_ACCESS_KEY_SECRET: ${CLOUDFLARE_R2_ACCESS_KEY_SECRET}
     depends_on:
       postgres:
         condition: service_healthy
@@ -55,14 +57,16 @@ services:
     #   - /app/apps/backend/dist
 
   frontend:
+    env_file:
+      - ../apps/frontend/.env.development
     build:
       context: ..
       dockerfile: docker/frontend.Dockerfile
       tags:
         - circa-frontend-dev
     container_name: circa-frontend-dev
-    environment:
-      VITE_API_URL: ${VITE_API_URL:-http://localhost:3333}
+    # environment:
+    #   VITE_API_URL: ${VITE_API_URL:-http://localhost:3333}
     ports:
       - "3000:3000"
     healthcheck:
