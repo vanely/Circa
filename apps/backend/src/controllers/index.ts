@@ -42,7 +42,9 @@ export function createControllers(fastify: FastifyInstance): ControllerRegistry 
     upload: new UploadController(prisma),
     websocket: websocketController,
     message: new MessageController(prisma, websocketController),
-    // Initialize other controllers here
+    ticket: new TicketController(prisma, websocketController),
+    venue: new VenueController(prisma),
+    collectible: new CollectibleController(prisma),
   };
   
   return controllers;
@@ -55,5 +57,8 @@ export type {
   EventController,
   UploadController,
   WebSocketController,
-  MessageController
+  MessageController,
+  TicketController,
+  VenueController,
+  CollectibleController
 };

@@ -232,7 +232,7 @@ export class EventController {
             label: eventData.venue.label,
             address: eventData.venue.address,
             location: eventData.venue.location 
-              ? JSON.stringify(eventData.venue.location)
+              ? JSON.stringify(eventData.venue.location) as any
               : null,
             visibility: eventData.venue.visibility,
           },
@@ -431,7 +431,7 @@ export class EventController {
               label: updateData.venue.label,
               address: updateData.venue.address,
               location: updateData.venue.location
-                ? JSON.stringify(updateData.venue.location)
+                ? JSON.stringify(updateData.venue.location) as any
                 : undefined,
               visibility: updateData.venue.visibility,
             },
@@ -444,7 +444,7 @@ export class EventController {
               label: updateData.venue.label,
               address: updateData.venue.address,
               location: updateData.venue.location
-                ? JSON.stringify(updateData.venue.location)
+                ? JSON.stringify(updateData.venue.location) as any
                 : null,
               visibility: updateData.venue.visibility,
             },
@@ -678,7 +678,7 @@ export class EventController {
             },
           });
         }
-      } else if (existingTicket?.status === 'waitlist' && status !== 'waitlist') {
+      } else if (existingTicket?.status === 'waitlist' && (status as string) !== 'waitlist') {
         // Remove from waitlist if status changed from waitlist to something else
         await this.prisma.waitlist.delete({
           where: {

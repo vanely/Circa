@@ -48,9 +48,6 @@ export class WaitlistService {
     const waitlistEntries = await this.prisma.waitlist.findMany({
       where: {
         eventId,
-        ticket: {
-          status: 'waitlist',
-        },
       },
       include: {
         user: {
@@ -60,7 +57,6 @@ export class WaitlistService {
             displayName: true,
           },
         },
-        ticket: true,
       },
       orderBy: {
         priority: 'asc', // Lower number = higher priority
@@ -71,11 +67,21 @@ export class WaitlistService {
     // Promote each user from the waitlist
     for (const entry of waitlistEntries) {
       await this.prisma.$transaction(async (tx) => {
-        // Update the ticket status to 'going'
-        await tx.ticket.update({
-          where: { id: entry.ticket.id },
-          data: { status: 'going' },
+        // Find the user's ticket for this event and update its status to 'going'
+        const ticket = await tx.ticket.findFirst({
+          where: {
+            eventId,
+            userId: entry.userId,
+            status: 'waitlist',
+          },
         });
+
+        if (ticket) {
+          await tx.ticket.update({
+            where: { id: ticket.id },
+            data: { status: 'going' },
+          });
+        }
 
         // Remove from waitlist
         await tx.waitlist.delete({
@@ -117,14 +123,16 @@ export class WaitlistService {
             minute: '2-digit',
           });
 
-          await emailService.sendEventInvitation(
-            entry.user.email,
-            eventDetails.title,
-            eventDetails.organizer.user.displayName,
-            eventDate,
-            `https://circa.app/events/${eventId}`,
-            'https://circa.app'
-          );
+          if (entry.user) {
+            await emailService.sendEventInvitation(
+              entry.user.email,
+              eventDetails.title,
+              eventDetails.organizer.user.displayName,
+              eventDate,
+              `https://circa.app/events/${eventId}`,
+              'https://circa.app'
+            );
+          }
         }
       } catch (error) {
         console.error('Failed to send waitlist promotion email:', error);

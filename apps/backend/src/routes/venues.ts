@@ -29,7 +29,7 @@ export const venueRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-  }, (request, reply) => venueController.createVenue(request, reply));
+  }, (request, reply) => venueController.createVenue(request as any, reply));
 
   // Get venues near a location
   fastify.get('/near', {
@@ -45,7 +45,7 @@ export const venueRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-  }, (request, reply) => venueController.getNearbyVenues(request, reply));
+  }, (request, reply) => venueController.getNearbyVenues(request as any, reply));
 
   // Get venue by ID
   fastify.get('/:id', {
@@ -58,7 +58,7 @@ export const venueRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-  }, (request, reply) => venueController.getVenueById(request, reply));
+  }, (request, reply) => venueController.getVenueById(request as any, reply));
 
   // Update venue
   fastify.patch('/:id', {
@@ -72,5 +72,5 @@ export const venueRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-  }, (request, reply) => venueController.updateVenue(request, reply));
+  }, (request, reply) => venueController.updateVenue(request as any, reply));
 };

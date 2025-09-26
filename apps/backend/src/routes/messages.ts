@@ -24,7 +24,7 @@ export const messageRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-  }, (request, reply) => messageController.getEventMessages(request, reply));
+  }, (request, reply) => messageController.getEventMessages(request as any, reply));
 
   // Create a new message
   fastify.post('/', {
@@ -41,7 +41,7 @@ export const messageRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-  }, (request, reply) => messageController.createMessage(request, reply));
+  }, (request, reply) => messageController.createMessage(request as any, reply));
 
   // Delete a message
   fastify.delete('/:id', {
@@ -55,7 +55,7 @@ export const messageRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-  }, (request, reply) => messageController.deleteMessage(request, reply));
+  }, (request, reply) => messageController.deleteMessage(request as any, reply));
 
   // Report a message
   fastify.post('/:id/report', {
@@ -76,5 +76,5 @@ export const messageRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-  }, (request, reply) => messageController.reportMessage(request, reply));
+  }, (request, reply) => messageController.reportMessage(request as any, reply));
 };

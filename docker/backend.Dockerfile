@@ -1,8 +1,9 @@
 # Use Node.js 18 Alpine for smaller image size
 FROM node:18-alpine
 
-# Install pnpm globally and create non-root user
+# Install pnpm globally, OpenSSL, and create non-root user
 RUN npm install -g pnpm && \
+    apk add --no-cache openssl && \
     addgroup -g 1001 -S nodejs && \
     adduser -S backend -u 1001 -G nodejs
 
@@ -19,14 +20,18 @@ RUN pnpm install --frozen-lockfile
 # Copy Prisma schema
 COPY --chown=backend:nodejs apps/backend/prisma ./apps/backend/prisma/
 
-# Generate Prisma client
-RUN pnpm --filter @circa/api db:generate
+# Install backend dependencies and generate Prisma client
+WORKDIR /app/apps/backend
+RUN pnpm install
+RUN pnpm db:generate
 
-# Copy source code
-COPY --chown=backend:nodejs apps/backend ./apps/backend/
+# Copy source code and tsconfig (excluding node_modules)
+COPY --chown=backend:nodejs apps/backend/src ./src/
+COPY --chown=backend:nodejs apps/backend/tsconfig.json ./
+COPY --chown=backend:nodejs apps/backend/.env* ./
 
 # Build the application
-RUN pnpm --filter @circa/api build
+RUN pnpm build
 
 # Change ownership of the entire app directory
 RUN chown -R backend:nodejs /app
@@ -40,5 +45,5 @@ EXPOSE 3333
 # Set working directory to backend app
 WORKDIR /app/apps/backend
 
-# Run database migrations and start the server
-CMD ["sh", "-c", "pnpm db:migrate && pnpm start"]
+# Start the server (skip migration for now)
+CMD ["sh", "-c", "pnpm start"]

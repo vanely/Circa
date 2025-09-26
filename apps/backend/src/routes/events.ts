@@ -281,7 +281,7 @@ export const eventRoutes: FastifyPluginAsync = async (fastify) => {
             label: eventData.venue.label,
             address: eventData.venue.address,
             location: eventData.venue.location 
-              ? JSON.stringify(eventData.venue.location)
+              ? JSON.stringify(eventData.venue.location) as any
               : null,
             visibility: eventData.venue.visibility,
           },
@@ -488,7 +488,7 @@ export const eventRoutes: FastifyPluginAsync = async (fastify) => {
               label: updateData.venue.label,
               address: updateData.venue.address,
               location: updateData.venue.location
-                ? JSON.stringify(updateData.venue.location)
+                ? JSON.stringify(updateData.venue.location) as any
                 : undefined,
               visibility: updateData.venue.visibility,
             },
@@ -501,7 +501,7 @@ export const eventRoutes: FastifyPluginAsync = async (fastify) => {
               label: updateData.venue.label,
               address: updateData.venue.address,
               location: updateData.venue.location
-                ? JSON.stringify(updateData.venue.location)
+                ? JSON.stringify(updateData.venue.location) as any
                 : null,
               visibility: updateData.venue.visibility,
             },
@@ -753,7 +753,7 @@ export const eventRoutes: FastifyPluginAsync = async (fastify) => {
             },
           });
         }
-      } else if (existingTicket?.status === 'waitlist' && status !== 'waitlist') {
+      } else if (existingTicket?.status === 'waitlist' && (status as string) !== 'waitlist') {
         // Remove from waitlist if status changed from waitlist to something else
         await fastify.prisma.waitlist.delete({
           where: {

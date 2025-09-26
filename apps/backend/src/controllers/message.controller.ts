@@ -253,11 +253,11 @@ export class MessageController {
         channel: message.channel,
         body: message.body,
         createdAt: message.createdAt,
-        user: {
+        user: message.user ? {
           id: message.user.id,
           displayName: message.user.displayName,
           avatarMediaId: message.user.avatarMediaId,
-        },
+        } : null,
         attachments: message.attachments.map(att => ({
           id: att.mediaId,
           mimeType: att.media.mimeType,

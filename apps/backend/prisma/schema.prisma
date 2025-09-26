@@ -29,6 +29,8 @@ model User {
   followedEvents   EventFollow[]
   userCollectibles UserCollectible[]
   checkins         Checkin[]
+  createdMedia     Media[]
+  waitlists        Waitlist[]
 
   @@map("users")
 }

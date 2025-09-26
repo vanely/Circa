@@ -16,7 +16,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-  }, (request, reply) => authController.sendMagicLink(request, reply));
+  }, (request, reply) => authController.sendMagicLink(request as any, reply));
 
   // Verify a magic link token
   fastify.post('/verify', {
@@ -29,12 +29,12 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-  }, (request, reply) => authController.verifyMagicLink(request, reply));
+  }, (request, reply) => authController.verifyMagicLink(request as any, reply));
 
   // Get current user
   fastify.get('/me', {
     onRequest: [fastify.authenticate],
-  }, (request, reply) => authController.getCurrentUser(request, reply));
+  }, (request, reply) => authController.getCurrentUser(request as any, reply));
 
   // Logout (client-side only, but we'll add an endpoint for symmetry)
   fastify.post('/logout', {

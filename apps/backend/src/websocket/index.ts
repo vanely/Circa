@@ -178,8 +178,8 @@ export default function setupWebsockets(fastify: FastifyInstance) {
         
         // Handle custom messages
         // Would implement other message types like typing indicators here
-      } catch (error) {
-        fastify.log.error('WebSocket message error:', error);
+      } catch (error: unknown) {
+        fastify.log.error('WebSocket message error:');
         sendError(socket, 'Invalid message format');
       }
     });
@@ -193,7 +193,7 @@ export default function setupWebsockets(fastify: FastifyInstance) {
   });
   
   // Helper to broadcast a message to all clients in a room
-  function broadcastToRoom(eventId: string, message: any) {
+  function broadcastToRoom(eventId: string, message: any): void {
     for (const client of clients.values()) {
       if (client.rooms.has(eventId)) {
         send(client.socket, message);
@@ -202,14 +202,14 @@ export default function setupWebsockets(fastify: FastifyInstance) {
   }
   
   // Helper to send a message to a specific client
-  function send(socket: WebSocket, message: any) {
-    if (socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify(message));
+  function send(socket: any, message: any): void {
+    if ((socket as any).readyState === 1) { // WebSocket.OPEN = 1
+      (socket as any).send(JSON.stringify(message));
     }
   }
   
   // Helper to send an error message
-  function sendError(socket: WebSocket, message: string) {
+  function sendError(socket: any, message: string): void {
     send(socket, {
       type: 'error',
       data: { message },

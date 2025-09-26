@@ -19,7 +19,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-  }, (request, reply) => uploadController.generatePresignedUrl(request, reply));
+  }, (request, reply) => uploadController.generatePresignedUrl(request as any, reply));
 
   // Update media metadata after upload
   fastify.patch('/media/:id', {
@@ -41,7 +41,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-  }, (request, reply) => uploadController.updateMediaMetadata(request, reply));
+  }, (request, reply) => uploadController.updateMediaMetadata(request as any, reply));
 
   // Get media details
   fastify.get('/media/:id', {
@@ -54,7 +54,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-  }, (request, reply) => uploadController.getMediaById(request, reply));
+  }, (request, reply) => uploadController.getMediaById(request as any, reply));
 
   // Delete media
   fastify.delete('/media/:id', {
@@ -68,5 +68,5 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-  }, (request, reply) => uploadController.deleteMedia(request, reply));
+  }, (request, reply) => uploadController.deleteMedia(request as any, reply));
 };

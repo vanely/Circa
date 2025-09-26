@@ -39,7 +39,7 @@ export const collectibleRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-  }, (request, reply) => collectibleController.getEventCollectibles(request, reply));
+  }, (request, reply) => collectibleController.getEventCollectibles(request as any, reply));
 
   // Award collectible to user
   fastify.post('/:id/award', {
@@ -60,7 +60,7 @@ export const collectibleRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-  }, (request, reply) => collectibleController.awardCollectible(request, reply));
+  }, (request, reply) => collectibleController.awardCollectible(request as any, reply));
 
   // Claim a collectible
   fastify.post('/:id/claim', {
@@ -74,7 +74,7 @@ export const collectibleRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-  }, (request, reply) => collectibleController.claimCollectible(request, reply));
+  }, (request, reply) => collectibleController.claimCollectible(request as any, reply));
 
   // Get user's collectibles
   fastify.get('/user/:userId', {
@@ -93,5 +93,5 @@ export const collectibleRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-  }, (request, reply) => collectibleController.getUserCollectibles(request, reply));
+  }, (request, reply) => collectibleController.getUserCollectibles(request as any, reply));
 };

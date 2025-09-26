@@ -19,7 +19,7 @@ export const ticketRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-  }, (request, reply) => ticketController.getMyTickets(request, reply));
+  }, (request, reply) => ticketController.getMyTickets(request as any, reply));
 
   // Create ticket type for an event
   fastify.post('/types', {
@@ -40,7 +40,7 @@ export const ticketRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-  }, (request, reply) => ticketController.createTicketType(request, reply));
+  }, (request, reply) => ticketController.createTicketType(request as any, reply));
 
   // Update a ticket type
   fastify.patch('/types/:id', {
@@ -54,7 +54,7 @@ export const ticketRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-  }, (request, reply) => ticketController.updateTicketType(request, reply));
+  }, (request, reply) => ticketController.updateTicketType(request as any, reply));
 
   // Delete a ticket type
   fastify.delete('/types/:id', {
@@ -68,7 +68,7 @@ export const ticketRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-  }, (request, reply) => ticketController.deleteTicketType(request, reply));
+  }, (request, reply) => ticketController.deleteTicketType(request as any, reply));
 
   // Check in an attendee
   fastify.post('/check-in/:ticketId', {
@@ -88,7 +88,7 @@ export const ticketRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-  }, (request, reply) => ticketController.checkInAttendee(request, reply));
+  }, (request, reply) => ticketController.checkInAttendee(request as any, reply));
 
   // Get check-ins for an event
   fastify.get('/check-ins/:eventId', {
@@ -109,5 +109,5 @@ export const ticketRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-  }, (request, reply) => ticketController.getEventCheckIns(request, reply));
+  }, (request, reply) => ticketController.getEventCheckIns(request as any, reply));
 };

@@ -32,7 +32,7 @@ export class AuthController {
       const { email } = magicLinkRequestSchema.parse(request.body);
       
       // Get the origin from request headers or use a default
-      const origin = request.headers.origin || 'http://localhost:5173';
+      const origin = request.headers.origin || 'http://localhost:3000';
       
       // Send magic link
       await this.authService.sendMagicLink(email, origin);

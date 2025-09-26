@@ -25,7 +25,7 @@ export class VenueController {
       
       // Convert location to JSON for storage
       const locationJson = venueData.location 
-        ? JSON.stringify(venueData.location) 
+        ? JSON.stringify(venueData.location) as any
         : null;
       
       const venue = await this.prisma.venue.create({
@@ -189,7 +189,7 @@ export class VenueController {
       
       // Convert location to JSON for storage if provided
       const locationJson = updates.location 
-        ? JSON.stringify(updates.location) 
+        ? JSON.stringify(updates.location) as any
         : undefined;
       
       const venue = await this.prisma.venue.update({

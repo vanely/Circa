@@ -29,6 +29,7 @@ declare module 'fastify' {
     controllers: ControllerRegistry;
     services: ServiceRegistry;
     config: typeof config;
+    authenticate: (request: any, reply: any) => Promise<void>;
   }
 }
 
@@ -59,15 +60,17 @@ export async function createApp(): Promise<FastifyInstance> {
   
   // Swagger documentation
   await app.register(swagger, {
-    routePrefix: '/docs',
     swagger: {
       info: {
         title: 'Circa API',
         description: 'API for the Circa event platform',
         version: '0.1.0',
       },
+      host: 'localhost:3333',
+      schemes: ['http'],
+      consumes: ['application/json'],
+      produces: ['application/json'],
     },
-    exposeRoute: true,
   });
 
   // Register authentication check decorator

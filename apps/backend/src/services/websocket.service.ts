@@ -3,6 +3,7 @@ import { WebSocket } from 'ws';
 import { verify } from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import config from '../config';
+import { SerializedError } from 'pino';
 
 interface WebSocketClient {
   socket: WebSocket;
@@ -100,8 +101,8 @@ export class WebSocketService {
             }, client.userId);
             return;
           }
-        } catch (error) {
-          this.fastify.log.error('WebSocket message error:', error);
+        } catch (error: unknown) {
+          this.fastify.log.error('WebSocket message error:');
           this.sendError(socket, 'Invalid message format');
         }
       });
@@ -239,8 +240,8 @@ export class WebSocketService {
         eventId,
         data: { userId: client.userId },
       }, client.userId);
-    } catch (error) {
-      this.fastify.log.error(`Error joining room ${eventId}:`, error);
+    } catch (error: any) {
+      this.fastify.log.error(`Error joining room ${eventId}:`);
       this.sendError(client.socket, 'Failed to join event room');
     }
   }
@@ -305,16 +306,16 @@ export class WebSocketService {
   /**
    * Send a message to a specific client
    */
-  private send(socket: WebSocket, message: any) {
-    if (socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify(message));
+  private send(socket: any, message: any): void {
+    if ((socket as WebSocket).readyState === 1) { // WebSocket.OPEN = 1
+      (socket as WebSocket).send(JSON.stringify(message));
     }
   }
 
   /**
    * Send an error message to a client
    */
-  private sendError(socket: WebSocket, message: string) {
+  private sendError(socket: any, message: string): void {
     this.send(socket, {
       type: 'error',
       data: { message },
