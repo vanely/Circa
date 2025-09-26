@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-hot-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { useLogin } from '@/hooks/auth';
+import { useAuthStore } from '@/stores/authStore';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 
 interface LoginFormData {
@@ -10,7 +11,8 @@ interface LoginFormData {
 }
 
 const LoginPage = () => {
-  const { login, isLoading } = useAuth();
+  const { isLoading } = useAuthStore();
+  const loginMutation = useLogin();
   const [emailSent, setEmailSent] = useState(false);
   const [sentToEmail, setSentToEmail] = useState('');
   
@@ -23,7 +25,7 @@ const LoginPage = () => {
   
   const onSubmit = async (data: LoginFormData) => {
     try {
-      await login(data.email);
+      await loginMutation.mutateAsync(data.email);
       toast.success('Magic link sent to your email');
       setEmailSent(true);
       setSentToEmail(data.email);
@@ -103,10 +105,10 @@ const LoginPage = () => {
               <div>
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || loginMutation.isPending}
                   className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isLoading ? <LoadingSpinner size="sm" color="white" /> : 'Send magic link'}
+                  {isLoading || loginMutation.isPending ? <LoadingSpinner size="sm" color="white" /> : 'Send magic link'}
                 </button>
               </div>
               

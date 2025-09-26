@@ -77,6 +77,7 @@ export interface EventFilters {
   visibility?: 'public' | 'unlisted';
   limit?: number;
   offset?: number;
+  userId?: string;
 }
 
 export interface RsvpRequest {

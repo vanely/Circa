@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthStore } from '@/stores/authStore';
+import { useRefreshUser } from '@/hooks/auth';
+import { usersApi } from '@/api/users';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
-import axios from '@/services/api';
 import { useNavigate } from 'react-router-dom';
 
 interface ProfileFormData {
@@ -17,7 +18,8 @@ interface OrganizerFormData {
 }
 
 const ProfilePage = () => {
-  const { user, refreshUserData } = useAuth();
+  const { user } = useAuthStore();
+  const refreshUserMutation = useRefreshUser();
   const navigate = useNavigate();
   const [showOrganizerForm, setShowOrganizerForm] = useState(false);
   
@@ -33,31 +35,22 @@ const ProfilePage = () => {
   // Query to get user's attending events
   const { data: attendingEvents, isPending: eventsLoading } = useQuery({
     queryKey: ['userEvents', 'attending'],
-    queryFn: async () => {
-      const response = await axios.get('/api/users/me/events/attending');
-      return response.data.events;
-    },
+    queryFn: () => usersApi.getUserAttendingEvents(),
   });
 
   // Query to get user's organizing events
   const { data: organizingEvents, isPending: organizingEventsLoading } = useQuery({
     queryKey: ['userEvents', 'organizing'],
-    queryFn: async () => {
-      const response = await axios.get('/api/users/me/events/organizing');
-      return response.data.events;
-    },
+    queryFn: () => usersApi.getUserOrganizingEvents(),
     enabled: !!user?.organizer,
   });
 
   // Update profile mutation
   const updateProfileMutation = useMutation({
-    mutationFn: async (data: ProfileFormData) => {
-      const response = await axios.patch('/api/users/me', data);
-      return response.data;
-    },
+    mutationFn: (data: ProfileFormData) => usersApi.updateCurrentUser(data),
     onSuccess: () => {
       toast.success('Profile updated successfully');
-      refreshUserData();
+      refreshUserMutation.mutate();
     },
     onError: () => {
       toast.error('Failed to update profile');
@@ -66,13 +59,10 @@ const ProfilePage = () => {
 
   // Create organizer profile mutation
   const createOrganizerMutation = useMutation({
-    mutationFn: async (data: OrganizerFormData) => {
-      const response = await axios.post('/api/users/me/organizer', data);
-      return response.data;
-    },
+    mutationFn: (data: OrganizerFormData) => usersApi.createOrganizerProfile(data),
     onSuccess: () => {
       toast.success('Organizer profile created successfully');
-      refreshUserData();
+      refreshUserMutation.mutate();
       setShowOrganizerForm(false);
     },
     onError: () => {
@@ -241,10 +231,10 @@ const ProfilePage = () => {
               <div className="flex justify-center py-8">
                 <LoadingSpinner />
               </div>
-            ) : attendingEvents && attendingEvents.length > 0 ? (
+            ) : attendingEvents?.events && attendingEvents.events.length > 0 ? (
               <div className="bg-white shadow-sm rounded-lg overflow-hidden">
                 <div className="divide-y divide-gray-200">
-                  {attendingEvents.map((event: any) => (
+                  {attendingEvents.events.map((event: any) => (
                     <div key={event.id} className="p-4 hover:bg-gray-50">
                       <a 
                         href={`/events/${event.id}`}
@@ -282,10 +272,10 @@ const ProfilePage = () => {
                 <div className="flex justify-center py-8">
                   <LoadingSpinner />
                 </div>
-              ) : organizingEvents && organizingEvents.length > 0 ? (
+              ) : organizingEvents?.events && organizingEvents.events.length > 0 ? (
                 <div className="bg-white shadow-sm rounded-lg overflow-hidden">
                   <div className="divide-y divide-gray-200">
-                    {organizingEvents.map((event: any) => (
+                    {organizingEvents.events.map((event: any) => (
                       <div key={event.id} className="p-4 hover:bg-gray-50">
                         <a 
                           href={`/events/${event.id}`}

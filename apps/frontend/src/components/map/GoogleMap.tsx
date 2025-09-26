@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { Wrapper, Status } from "@googlemaps/react-wrapper";
 import { createRoot } from 'react-dom/client';
-import { useMap } from '@/contexts/MapContext';
+import { useMapStore } from '@/stores/mapStore';
 import { cn } from '@/utils/cn';
 import EventPopup from '@/components/map/EventPopup';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
@@ -42,7 +42,7 @@ const MapComponent = ({ className }: { className?: string }) => {
     isLoading,
     setPosition, 
     selectEvent 
-  } = useMap();
+  } = useMapStore();
   
   const [mapReady, setMapReady] = useState(false);
 

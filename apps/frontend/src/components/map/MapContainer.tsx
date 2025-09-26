@@ -1,4 +1,4 @@
-import { useMap } from '@/contexts/MapContext';
+import { useMapStore } from '@/stores/mapStore';
 import MapLibreMap from '@/components/map/MapLibreMap';
 import GoogleMap from '@/components/map/GoogleMap';
 import { cn } from '@/utils/cn';
@@ -8,7 +8,7 @@ interface MapContainerProps {
 }
 
 const MapContainer = ({ className }: MapContainerProps) => {
-  const { mapProvider, toggleMapProvider } = useMap();
+  const { mapProvider, toggleMapProvider } = useMapStore();
 
   return (
     <div className={cn('relative w-full h-full', className)}>

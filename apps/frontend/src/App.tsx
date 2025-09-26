@@ -1,9 +1,10 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import MainLayout from '@/components/layouts/MainLayout';
 import HomePage from '@/pages/HomePage';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
-import { AuthProvider } from '@/contexts/AuthContext';
+import { QueryProvider } from '@/providers/QueryProvider';
+import { useAuthStore } from '@/stores/authStore';
 
 // Lazy loaded pages for code splitting
 const EventDetailPage = lazy(() => import('@/pages/EventDetailPage'));
@@ -14,8 +15,11 @@ const VerifyPage = lazy(() => import('@/pages/VerifyPage'));
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
-  // We'll implement this with actual auth logic later
-  const isAuthenticated = localStorage.getItem('token') !== null;
+  const { isAuthenticated, isLoading } = useAuthStore();
+  
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
   
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -25,8 +29,14 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
 };
 
 function App() {
+  const { initializeAuth } = useAuthStore();
+  
+  useEffect(() => {
+    initializeAuth();
+  }, [initializeAuth]);
+
   return (
-    <AuthProvider>
+    <QueryProvider>
       <Routes>
         <Route path="/" element={<MainLayout />}>
           {/* Public routes */}
@@ -82,7 +92,7 @@ function App() {
           <Route path="*" element={<div>Not Found</div>} />
         </Route>
       </Routes>
-    </AuthProvider>
+    </QueryProvider>
   );
 }
 

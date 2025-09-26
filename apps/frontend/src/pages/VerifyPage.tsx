@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, Navigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { useVerifyMagicLink } from '@/hooks/auth';
+import { useAuthStore } from '@/stores/authStore';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 
 const VerifyPage = () => {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
-  const { verifyMagicLink, isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading } = useAuthStore();
+  const verifyMagicLinkMutation = useVerifyMagicLink();
   const [verificationAttempted, setVerificationAttempted] = useState(false);
   const [verificationError, setVerificationError] = useState<string | null>(null);
 
@@ -20,7 +22,7 @@ const VerifyPage = () => {
       }
 
       try {
-        await verifyMagicLink(token);
+        await verifyMagicLinkMutation.mutateAsync(token);
         toast.success('Successfully signed in!');
         setVerificationAttempted(true);
       } catch (error) {
@@ -33,7 +35,7 @@ const VerifyPage = () => {
     if (token && !verificationAttempted && !isAuthenticated) {
       verifyToken();
     }
-  }, [token, verifyMagicLink, isAuthenticated, verificationAttempted]);
+  }, [token, verifyMagicLinkMutation, isAuthenticated, verificationAttempted]);
 
   // Redirect if already authenticated
   if (isAuthenticated) {
@@ -50,7 +52,7 @@ const VerifyPage = () => {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          {isLoading ? (
+          {isLoading || verifyMagicLinkMutation.isPending ? (
             <div className="text-center py-6">
               <LoadingSpinner size="lg" className="mb-4" />
               <p className="text-gray-600">Verifying your magic link...</p>

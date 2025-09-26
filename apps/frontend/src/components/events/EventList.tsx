@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { useMap } from '@/contexts/MapContext';
+import { useMapStore } from '@/stores/mapStore';
 import { Event } from '@/types/event';
 import EventCard from '@/components/events/EventCard';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
@@ -12,7 +12,7 @@ interface EventListProps {
 }
 
 const EventList = ({ className, onEventClick }: EventListProps) => {
-  const { events, selectedEvent, isLoading, selectEvent, flyToEvent } = useMap();
+  const { events, selectedEvent, isLoading, selectEvent, flyToEvent } = useMapStore();
   
   const handleEventClick = useCallback((event: Event) => {
     if (onEventClick) {

@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { useMap } from '@/contexts/MapContext';
+import { useMapStore } from '@/stores/mapStore';
 import { cn } from '@/utils/cn';
 import EventPopup from '@/components/map/EventPopup';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
@@ -23,7 +23,7 @@ const MapLibreMap = ({ className }: MapLibreMapProps) => {
     isLoading,
     setPosition, 
     selectEvent 
-  } = useMap();
+  } = useMapStore();
   
   const [mapReady, setMapReady] = useState(false);
 

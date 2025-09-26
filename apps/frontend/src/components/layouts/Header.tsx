@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthStore } from '@/stores/authStore';
+import { useLogout } from '@/hooks/auth';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated } = useAuthStore();
+  const logoutMutation = useLogout();
   const navigate = useNavigate();
   
   const toggleMenu = () => {
@@ -79,7 +81,7 @@ const Header = () => {
                       </Link>
                       <button
                         onClick={() => {
-                          logout();
+                          logoutMutation.mutate();
                           closeMenu();
                         }}
                         className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
@@ -175,7 +177,7 @@ const Header = () => {
                 </Link>
                 <button
                   onClick={() => {
-                    logout();
+                    logoutMutation.mutate();
                     closeMenu();
                   }}
                   className="block w-full text-left py-2 text-gray-700 hover:text-primary-600"

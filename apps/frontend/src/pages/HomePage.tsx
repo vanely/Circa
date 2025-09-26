@@ -1,17 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
-import { MapProvider, useMap } from '@/contexts/MapContext';
+import { useMapStore } from '@/stores/mapStore';
 import MapContainer from '@/components/map/MapContainer';
 import EventList from '@/components/events/EventList';
 import EventFilters from '@/components/events/EventFilters';
-import { eventService } from '@/services/eventService';
+import { useEvents } from '@/hooks/events';
 import { EventFilters as FilterType } from '@/types/event';
 import { cn } from '@/utils/cn';
 
 // Main content with Map and Event integration
 const HomeContent = () => {
-  // Access map context
+  // Access map store
   const { 
     position, 
     showList, 
@@ -19,7 +18,7 @@ const HomeContent = () => {
     setEvents, 
     setIsLoading, 
     getUserLocation 
-  } = useMap();
+  } = useMapStore();
   
   // Event filters state
   const [filters, setFilters] = useState<FilterType>({
@@ -39,11 +38,7 @@ const HomeContent = () => {
   };
   
   // Fetch events based on filters and position
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ['events', combinedFilters],
-    queryFn: () => eventService.getEvents(combinedFilters),
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
+  const { data, isLoading, isError } = useEvents(combinedFilters);
   
   // Update loading state in map context
   useEffect(() => {
@@ -132,13 +127,9 @@ const HomeContent = () => {
   );
 };
 
-// HomePage wrapper with MapProvider
+// HomePage component
 const HomePage = () => {
-  return (
-    <MapProvider>
-      <HomeContent />
-    </MapProvider>
-  );
+  return <HomeContent />;
 };
 
 export default HomePage;
