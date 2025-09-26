@@ -34,9 +34,14 @@ help:
 	@echo "  clean-volumes - Remove all volumes (WARNING: deletes data)"
 	@echo "  clean-all    - Clean everything including images"
 
-# Development mode - starts with live reload
+# Development mode - starts with live reload via volume mounts
 dev:
-	@echo "Starting development environment..."
+	@echo "Starting development environment with live file watching..."
+	docker-compose -f docker/docker-compose.yml up --build
+
+# Development mode without volume mounts (production-like)
+dev-no-watch:
+	@echo "Starting development environment without file watching..."
 	docker-compose -f docker/docker-compose.yml up --build
 
 # Build all images

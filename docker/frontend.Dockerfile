@@ -34,5 +34,5 @@ USER frontend
 # Expose port
 EXPOSE 3000
 
-# Start the preview server to serve the built files
-CMD ["sh", "-c", "cd /app/apps/frontend && pnpm preview --host 0.0.0.0 --port 3000"]
+# Start the development server with hot reload
+CMD ["sh", "-c", "cd /app/apps/frontend && pnpm dev --host 0.0.0.0 --port 3000"]

@@ -45,5 +45,5 @@ EXPOSE 3333
 # Set working directory to backend app
 WORKDIR /app/apps/backend
 
-# Start the server (skip migration for now)
-CMD ["sh", "-c", "pnpm start"]
+# Start the development server with file watching
+CMD ["sh", "-c", "pnpm start:dev"]
