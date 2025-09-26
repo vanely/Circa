@@ -1,9 +1,9 @@
 # Use Node.js 18 Alpine for smaller image size
 FROM node:18-alpine
 
-# Install pnpm globally, OpenSSL, and create non-root user
+# Install pnpm globally, OpenSSL, curl, and create non-root user
 RUN npm install -g pnpm && \
-    apk add --no-cache openssl && \
+    apk add --no-cache openssl curl && \
     addgroup -g 1001 -S nodejs && \
     adduser -S backend -u 1001 -G nodejs
 

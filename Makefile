@@ -1,14 +1,15 @@
 # Circa Project Makefile
 # This Makefile provides commands for building, running, and managing the Docker containers
 
-.PHONY: help build build-backend build-frontend start stop restart logs logs-backend logs-frontend logs-postgres clean clean-volumes dev test status ps
+.PHONY: help build build-backend build-frontend start stop restart logs logs-backend logs-frontend logs-postgres clean clean-volumes clean-all clean-images dev dev-foreground test status ps health-check health-status
 
 # Default target
 help:
 	@echo "Circa Project - Available Commands:"
 	@echo ""
 	@echo "Development:"
-	@echo "  dev          - Start all services in development mode"
+	@echo "  dev          - Start all services in development mode (background)"
+	@echo "  dev-foreground - Start all services in foreground (shows logs)"
 	@echo "  start        - Start all services"
 	@echo "  stop         - Stop all services"
 	@echo "  restart      - Restart all services"
@@ -25,6 +26,8 @@ help:
 	@echo "  logs-postgres - Show postgres logs"
 	@echo "  status       - Show service status"
 	@echo "  ps           - Show running containers"
+	@echo "  health-check - Check service endpoints"
+	@echo "  health-status - Show container health status"
 	@echo ""
 	@echo "Testing:"
 	@echo "  test         - Run tests for all services"
@@ -33,16 +36,13 @@ help:
 	@echo "  clean        - Stop and remove containers, networks"
 	@echo "  clean-volumes - Remove all volumes (WARNING: deletes data)"
 	@echo "  clean-all    - Clean everything including images"
+	@echo "  clean-images - Remove ALL Docker images (WARNING: system-wide)"
 
 # Development mode - starts with live reload via volume mounts
 dev:
 	@echo "Starting development environment with live file watching..."
-	docker-compose -f docker/docker-compose.yml up --build
-
-# Development mode without volume mounts (production-like)
-dev-no-watch:
-	@echo "Starting development environment without file watching..."
-	docker-compose -f docker/docker-compose.yml up --build
+	docker-compose -f docker/docker-compose.yml up --build -d
+	@echo "Services started in background. Use 'make logs' to view logs or 'make stop' to stop services."
 
 # Build all images
 build:
@@ -126,12 +126,31 @@ clean-all: clean-volumes
 	@echo "Removing Docker images..."
 	docker-compose -f docker/docker-compose.yml down --rmi all --remove-orphans
 
+# Remove all Docker images (WARNING: deletes all images on system)
+clean-images:
+	@echo "WARNING: This will delete ALL Docker images on your system!"
+	@echo "This includes images not related to this project."
+	@read -p "Are you sure? (y/N): " confirm && [ "$$confirm" = "y" ] || exit 1
+	@echo "Removing all Docker images..."
+	docker rmi $$(docker images -q) -f 2>/dev/null || echo "No images to remove or some images are in use"
+
 # Health check endpoints
 health-check:
 	@echo "Checking service health..."
 	@echo "Backend: $$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3333/health || echo "DOWN")"
 	@echo "Frontend: $$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 || echo "DOWN")"
 	@echo "Postgres: $$(docker-compose -f docker/docker-compose.yml exec -T postgres pg_isready -U postgres && echo "UP" || echo "DOWN")"
+
+# Container health status
+health-status:
+	@echo "Container Health Status:"
+	@echo "========================"
+	@docker ps --format "table {{.Names}}\t{{.Status}}"
+	@echo ""
+	@echo "Detailed Health Status:"
+	@echo "Postgres: $$(docker inspect circa-postgres-dev --format='{{.State.Health.Status}}' 2>/dev/null || echo 'no-health-check')"
+	@echo "Backend: $$(docker inspect circa-backend-dev --format='{{.State.Health.Status}}' 2>/dev/null || echo 'no-health-check')"
+	@echo "Frontend: $$(docker inspect circa-frontend-dev --format='{{.State.Health.Status}}' 2>/dev/null || echo 'no-health-check')"
 
 # Install dependencies locally (for development)
 install:
