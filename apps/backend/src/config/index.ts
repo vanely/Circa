@@ -26,7 +26,7 @@ interface Config {
 // Load and validate environment variables
 const config: Config = {
   env: process.env.NODE_ENV || 'development',
-  port: parseInt(process.env.PORT || '3000', 10),
+  port: parseInt(process.env.PORT || '3333', 10),
   host: process.env.HOST || '0.0.0.0',
   database: {
     url: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/circa',
