@@ -1,7 +1,13 @@
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
+import { 
+  Box, 
+  Text, 
+  HStack, 
+  Badge, 
+  useColorModeValue 
+} from '@chakra-ui/react';
 import { Event } from '@/types/event';
-import { cn } from '@/utils/cn';
 
 interface EventCardProps {
   event: Event;
@@ -12,97 +18,135 @@ interface EventCardProps {
 
 const EventCard = ({ event, isSelected = false, onClick, compact = false }: EventCardProps) => {
   const startDate = new Date(event.startAt);
-  
+  const bg = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
+  const selectedBorderColor = useColorModeValue('brand.500', 'brand.400');
+
   return (
-    <div 
-      className={cn(
-        'event-card',
-        isSelected && 'ring-2 ring-primary-600',
-        'transition-all duration-200',
-        compact ? 'p-3' : 'p-4'
-      )}
+    <Box
+      cursor="pointer"
+      transition="all 0.2s"
+      _hover={{ shadow: 'md' }}
+      border="1px"
+      borderColor={isSelected ? selectedBorderColor : borderColor}
+      borderRadius="lg"
+      bg={bg}
+      p={compact ? 3 : 4}
       onClick={onClick}
+      boxShadow={isSelected ? 'lg' : 'none'}
+      borderWidth={isSelected ? '2px' : '1px'}
     >
-      <div className="flex items-start gap-3">
+      <HStack spacing={3} align="start">
         {/* Date block */}
-        <div className="flex-shrink-0 w-14 h-14 bg-primary-50 rounded-md flex flex-col items-center justify-center text-center">
-          <span className="text-primary-700 font-bold text-lg leading-none">
+        <Box
+          flexShrink={0}
+          w={12}
+          h={12}
+          bg="gray.100"
+          borderRadius="lg"
+          display="flex"
+          flexDirection="column"
+          alignItems="center"
+          justifyContent="center"
+          textAlign="center"
+        >
+          <Text fontSize="sm" fontWeight="bold" color="brand.600" lineHeight="none">
             {format(startDate, 'd')}
-          </span>
-          <span className="text-primary-600 text-sm uppercase leading-none mt-1">
+          </Text>
+          <Text fontSize="xs" color="gray.500" textTransform="uppercase" lineHeight="none" mt={1}>
             {format(startDate, 'MMM')}
-          </span>
-        </div>
-        
+          </Text>
+        </Box>
+
         {/* Event details */}
-        <div className="flex-1 min-w-0">
-          <h3 className={cn(
-            "font-heading font-bold text-gray-900 truncate",
-            compact ? 'text-base' : 'text-lg'
-          )}>
-            <Link
-              to={`/events/${event.id}`}
-              className="hover:text-primary-600 focus:outline-none focus:underline"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {event.title}
-            </Link>
-          </h3>
-          
+        <Box flex="1" minW={0}>
+                 <Text
+                   fontSize={compact ? 'base' : 'lg'}
+                   fontWeight="semibold"
+                   isTruncated
+                   mb={1}
+                 >
+                   <Link
+                     to={`/events/${event.id}`}
+                     onClick={(e) => e.stopPropagation()}
+                   >
+                     {event.title}
+                   </Link>
+                 </Text>
+
           {/* Time */}
-          <p className={cn(
-            "text-gray-600",
-            compact ? 'text-xs' : 'text-sm'
-          )}>
+          <Text
+            fontSize={compact ? 'xs' : 'sm'}
+            color="gray.500"
+            mb={1}
+          >
             {format(startDate, 'E, MMM d • h:mm a')}
-          </p>
-          
+          </Text>
+
           {/* Location - only display if exists */}
           {event.venue?.label && (
-            <p className={cn(
-              "flex items-center text-gray-600 mt-0.5 truncate",
-              compact ? 'text-xs' : 'text-sm'
-            )}>
-              <svg className="w-3.5 h-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <span className="truncate">{event.venue.label}</span>
-            </p>
+            <HStack spacing={1} mb={1}>
+              <Text fontSize="xs">📍</Text>
+              <Text
+                fontSize={compact ? 'xs' : 'sm'}
+                color="gray.500"
+                isTruncated
+              >
+                {event.venue.label}
+              </Text>
+            </HStack>
           )}
-          
+
           {/* Summary - only in non-compact mode */}
           {!compact && event.summary && (
-            <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+            <Text
+              fontSize="sm"
+              color="gray.500"
+              mt={1}
+              noOfLines={2}
+            >
               {event.summary}
-            </p>
+            </Text>
           )}
-          
+
           {/* Tags and attendees - only in non-compact mode */}
           {!compact && (
-            <div className="mt-2 flex flex-wrap items-center gap-2">
+            <HStack spacing={2} mt={2} wrap="wrap">
               {event.tags && event.tags.length > 0 && (
                 event.tags.slice(0, 3).map((tag) => (
-                  <span
-                    key={tag}
-                    className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary-100 text-primary-800"
-                  >
+                  <Badge key={tag} variant="subtle" colorScheme="gray" fontSize="xs">
                     {tag}
-                  </span>
+                  </Badge>
                 ))
               )}
-              
-              <span className="inline-flex items-center text-xs text-gray-500">
-                <svg className="w-3.5 h-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                {event.attendeeCount} going
-              </span>
-            </div>
+
+              <HStack spacing={1}>
+                <Text fontSize="xs">👥</Text>
+                <Text fontSize="xs" color="gray.500">
+                  {event.attendeeCount} going
+                </Text>
+              </HStack>
+            </HStack>
           )}
-        </div>
-      </div>
-    </div>
+        </Box>
+
+        {/* Selection indicator */}
+        {isSelected && (
+          <Box
+            flexShrink={0}
+            w={6}
+            h={6}
+            borderRadius="full"
+            bg="brand.600"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+          >
+            <Text fontSize="xs" color="white">✓</Text>
+          </Box>
+        )}
+      </HStack>
+    </Box>
   );
 };
 

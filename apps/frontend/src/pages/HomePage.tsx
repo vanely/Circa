@@ -1,12 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
+import { 
+  Box, 
+  Flex, 
+  Button, 
+  Text, 
+  HStack, 
+  Hide,
+  Spinner,
+  useColorModeValue
+} from '@chakra-ui/react';
 import { useMapStore } from '@/stores/mapStore';
 import MapContainer from '@/components/map/MapContainer';
 import EventList from '@/components/events/EventList';
 import EventFilters from '@/components/events/EventFilters';
 import { useEvents } from '@/hooks/events';
 import { EventFilters as FilterType } from '@/types/event';
-import { cn } from '@/utils/cn';
 
 // Main content with Map and Event integration
 const HomeContent = () => {
@@ -74,83 +83,110 @@ const HomeContent = () => {
     });
   }, [getUserLocation]);
   
+  const bg = useColorModeValue('gray.50', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
+  
   return (
-    <div className="flex flex-col lg:flex-row h-screen-minus-header">
+    <Flex direction={{ base: 'column', lg: 'row' }} h="calc(100vh - 3.5rem)">
       {/* Sidebar with filters and event list */}
-      <div 
-        className={cn(
-          'w-full lg:w-96 flex flex-col border-r border-primary bg-secondary z-10 transition-all duration-300',
-          !showList && 'hidden lg:flex'
-        )}
+      <Box
+        w={{ base: 'full', lg: '320px' }}
+        display={{ base: showList ? 'flex' : 'none', lg: 'flex' }}
+        flexDirection="column"
+        borderRight="1px"
+        borderColor={borderColor}
+        bg={bg}
+        zIndex={10}
+        transition="all 0.3s"
       >
         {/* Filters */}
-        <div className="p-4 border-b border-primary">
+        <Box p={3} borderBottom="1px" borderColor={borderColor}>
           <EventFilters 
             initialFilters={filters}
             onFilterChange={handleFilterChange}
           />
-        </div>
+        </Box>
         
         {/* Event list */}
-        <div className="flex-1 overflow-hidden">
+        <Box flex="1" overflow="hidden">
           <EventList />
-        </div>
-      </div>
+        </Box>
+      </Box>
       
       {/* Map */}
-      <div 
-        className={cn(
-          'flex-1 relative bg-tertiary',
-          showList && 'hidden lg:block'
-        )}
+      <Box
+        flex="1"
+        position="relative"
+        bg="gray.100"
+        display={{ base: showList ? 'none' : 'block', lg: 'block' }}
       >
         <MapContainer />
         
         {/* Mobile toggle for list view */}
-        <div className="lg:hidden absolute bottom-4 right-4 z-20">
-          <button
-            onClick={toggleShowList}
-            className="btn btn-primary btn-lg glass glow-primary"
-            aria-label={showList ? 'Show map' : 'Show events'}
-          >
-            {showList ? (
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-              </svg>
-            ) : (
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-              </svg>
-            )}
-          </button>
-        </div>
+        <Hide above="lg">
+          <Box position="absolute" bottom={4} right={4} zIndex={20}>
+            <Button
+              onClick={toggleShowList}
+              colorScheme="brand"
+              size="lg"
+              borderRadius="full"
+              boxShadow="lg"
+              aria-label={showList ? 'Show map' : 'Show events'}
+            >
+              {showList ? '🗺️' : '📋'}
+            </Button>
+          </Box>
+        </Hide>
         
         {/* Map overlay with event count */}
-        <div className="absolute top-4 left-4 z-10">
-          <div className="glass rounded-lg px-3 py-2">
-            <div className="flex items-center gap-2 text-sm">
-              <svg className="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <span className="text-primary font-medium">
+        <Box position="absolute" top={4} left={4} zIndex={10}>
+          <Box
+            bg="whiteAlpha.800"
+            backdropFilter="blur(10px)"
+            border="1px"
+            borderColor={borderColor}
+            borderRadius="lg"
+            px={3}
+            py={2}
+          >
+            <HStack spacing={2}>
+              <Text fontSize="sm">📍</Text>
+              <Text fontSize="sm" fontWeight="medium">
                 {data?.events.length || 0} events nearby
-              </span>
-            </div>
-          </div>
-        </div>
+              </Text>
+            </HStack>
+          </Box>
+        </Box>
         
         {/* Loading overlay */}
         {isLoading && (
-          <div className="absolute inset-0 bg-overlay flex items-center justify-center z-20">
-            <div className="glass rounded-lg p-6 flex items-center gap-3">
-              <div className="spinner"></div>
-              <span className="text-primary font-medium">Loading events...</span>
-            </div>
-          </div>
+          <Box
+            position="absolute"
+            inset={0}
+            bg="whiteAlpha.800"
+            backdropFilter="blur(10px)"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            zIndex={20}
+          >
+            <Box
+              bg="white"
+              border="1px"
+              borderColor={borderColor}
+              borderRadius="lg"
+              p={6}
+              display="flex"
+              alignItems="center"
+              gap={3}
+            >
+              <Spinner size="sm" color="brand.500" />
+              <Text fontWeight="medium">Loading events...</Text>
+            </Box>
+          </Box>
         )}
-      </div>
-    </div>
+      </Box>
+    </Flex>
   );
 };
 

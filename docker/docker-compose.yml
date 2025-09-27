@@ -1,5 +1,7 @@
 services:
   postgres:
+    env_file:
+      - ../apps/backend/.env.development.postgres
     image: postgis/postgis:15-3.4
     container_name: circa-postgres-dev
     # environment:
@@ -11,7 +13,7 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U circa-db-user-dev -d circa"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -50,11 +52,14 @@ services:
       start_period: 40s
     networks:
       - circa-dev-network
-    # volumes:
-    #   - ./apps/backend/src:/app/apps/backend/src
-    #   - ./apps/backend/prisma:/app/apps/backend/prisma
-    #   - /app/apps/backend/node_modules
-    #   - /app/apps/backend/dist
+    volumes:
+      - ../apps/backend/src:/app/apps/backend/src
+      - ../apps/backend/prisma:/app/apps/backend/prisma
+      - ../apps/backend/package.json:/app/apps/backend/package.json
+      - ../apps/backend/package-lock.json:/app/apps/backend/package-lock.json
+      - ../apps/backend/tsconfig.json:/app/apps/backend/tsconfig.json
+      - /app/apps/backend/node_modules
+      - /app/apps/backend/dist
 
   frontend:
     env_file:
@@ -77,10 +82,18 @@ services:
       start_period: 30s
     networks:
       - circa-dev-network
-    # volumes:
-    #   - ./apps/frontend/src:/app/apps/frontend/src
-    #   - /app/apps/frontend/node_modules
-    #   - /app/apps/frontend/dist
+    volumes:
+      - ../apps/frontend/src:/app/apps/frontend/src
+      - ../apps/frontend/public:/app/apps/frontend/public
+      - ../apps/frontend/index.html:/app/apps/frontend/index.html
+      - ../apps/frontend/package.json:/app/apps/frontend/package.json
+      - ../apps/frontend/package-lock.json:/app/apps/frontend/package-lock.json
+      - ../apps/frontend/vite.config.ts:/app/apps/frontend/vite.config.ts
+      - ../apps/frontend/tsconfig.json:/app/apps/frontend/tsconfig.json
+      - ../apps/frontend/tsconfig.node.json:/app/apps/frontend/tsconfig.node.json
+      - ../apps/frontend/tailwind.config.js:/app/apps/frontend/tailwind.config.js
+      - /app/apps/frontend/node_modules
+      - /app/apps/frontend/dist
 
 volumes:
   postgres-data:

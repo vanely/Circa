@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'react-hot-toast';
 import { useAuthStore } from '@/stores/authStore';
 import { authApi } from '@/api/auth';
 import { queryKeys } from '../queryKeys';
@@ -13,6 +14,13 @@ export const useCurrentUser = () => {
     enabled: isAuthenticated && !!token,
     initialData: user,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: (failureCount, error: any) => {
+      // Don't retry on 401/403 errors
+      if (error?.response?.status === 401 || error?.response?.status === 403) {
+        return false;
+      }
+      return failureCount < 3;
+    },
   });
 };
 
@@ -24,6 +32,23 @@ export const useLogin = () => {
     mutationFn: (email: string) => authApi.login(email),
     onMutate: () => {
       setLoading(true);
+    },
+    onSuccess: () => {
+      toast.success('Magic link sent! Check your email.');
+    },
+    onError: (error: any) => {
+      console.error('Login error:', error);
+      
+      // Handle different error types
+      if (error?.response?.status === 429) {
+        toast.error('Too many requests. Please wait a moment before trying again.');
+      } else if (error?.response?.status === 400) {
+        toast.error('Invalid email address. Please check and try again.');
+      } else if (error?.response?.status >= 500) {
+        toast.error('Server error. Please try again later.');
+      } else {
+        toast.error('Failed to send magic link. Please try again.');
+      }
     },
     onSettled: () => {
       setLoading(false);
@@ -42,8 +67,23 @@ export const useVerifyMagicLink = () => {
       setLoading(true);
     },
     onSuccess: () => {
+      toast.success('Successfully signed in! Welcome to Circa.');
       // Invalidate and refetch user data
       queryClient.invalidateQueries({ queryKey: queryKeys.auth.currentUser() });
+    },
+    onError: (error: any) => {
+      console.error('Verification error:', error);
+      
+      // Handle different error types
+      if (error?.response?.status === 400) {
+        toast.error('Invalid or expired magic link. Please request a new one.');
+      } else if (error?.response?.status === 401) {
+        toast.error('Magic link has expired. Please request a new one.');
+      } else if (error?.response?.status >= 500) {
+        toast.error('Server error. Please try again later.');
+      } else {
+        toast.error('Failed to verify magic link. Please try again.');
+      }
     },
     onSettled: () => {
       setLoading(false);
@@ -58,8 +98,15 @@ export const useLogout = () => {
   return useMutation({
     mutationFn: authApi.logout,
     onSuccess: () => {
+      toast.success('Successfully signed out.');
       // Clear all queries on logout
       queryClient.clear();
+    },
+    onError: (error: any) => {
+      console.error('Logout error:', error);
+      // Even if logout fails on server, clear local state
+      queryClient.clear();
+      toast.error('Signed out locally. Please refresh the page.');
     },
   });
 };
@@ -74,5 +121,21 @@ export const useRefreshUser = () => {
       // Invalidate and refetch user data
       queryClient.invalidateQueries({ queryKey: queryKeys.auth.currentUser() });
     },
+    onError: (error: any) => {
+      console.error('Failed to refresh user data:', error);
+      toast.error('Failed to refresh user data. Please try again.');
+    },
   });
+};
+
+// Hook for checking authentication status
+export const useAuthStatus = () => {
+  const { isAuthenticated, isLoading, user } = useAuthStore();
+  
+  return {
+    isAuthenticated,
+    isLoading,
+    user,
+    isLoggedIn: isAuthenticated && !!user,
+  };
 };

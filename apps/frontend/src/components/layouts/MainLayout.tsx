@@ -1,16 +1,22 @@
 import { Outlet } from 'react-router-dom';
+import { Box } from '@chakra-ui/react';
 import Header from '@/components/layouts/Header';
 import Footer from '@/components/layouts/Footer';
 
 const MainLayout = () => {
   return (
-    <div className="flex flex-col min-h-screen bg-primary transition-theme">
+    <Box minH="100vh" bg="white" display="flex" flexDirection="column">
+      {/* Header */}
       <Header />
-      <main className="flex-grow">
+
+      {/* Main content */}
+      <Box as="main" flex="1" display="flex" flexDirection="column">
         <Outlet />
-      </main>
+      </Box>
+
+      {/* Footer */}
       <Footer />
-    </div>
+    </Box>
   );
 };
 

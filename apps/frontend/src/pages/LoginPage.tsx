@@ -37,85 +37,145 @@ const LoginPage = () => {
   };
   
   return (
-    <div className="min-h-screen-minus-header flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-gray-50">
+    <div className="min-h-screen-minus-header bg-primary flex flex-col justify-center py-8 px-4 sm:px-6 lg:px-8 transition-theme">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 className="mt-6 text-center text-3xl font-heading font-bold text-gray-900">
-          {emailSent ? 'Check your email' : 'Sign in to Circa'}
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          {emailSent 
-            ? 'We sent you a magic link to continue'
-            : 'Discover and join amazing events in your area'
-          }
-        </p>
+        {/* Logo */}
+        <div className="flex justify-center mb-8">
+          <Link to="/" className="flex items-center group">
+            <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center mr-3 group-hover:scale-105 transition-transform">
+              <span className="text-white font-bold text-xl">C</span>
+            </div>
+            <span className="font-heading text-2xl font-bold text-primary group-hover:text-accent transition-colors">
+              Circa
+            </span>
+          </Link>
+        </div>
+
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-heading font-bold text-primary mb-2">
+            {emailSent ? 'Check your email' : 'Welcome back'}
+          </h1>
+          <p className="text-secondary">
+            {emailSent 
+              ? 'We sent you a magic link to continue'
+              : 'Sign in to discover amazing events'
+            }
+          </p>
+        </div>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="card p-8">
           {emailSent ? (
             <div className="text-center">
-              <div className="mb-6 text-primary-600">
-                <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              {/* Success Icon */}
+              <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-success flex items-center justify-center">
+                <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               </div>
-              <p className="mb-2 text-gray-800">
-                We've sent a magic link to <span className="font-medium">{sentToEmail}</span>
+              
+              {/* Success Message */}
+              <h2 className="text-xl font-heading font-bold text-primary mb-4">
+                Magic link sent!
+              </h2>
+              <p className="text-secondary mb-2">
+                We've sent a magic link to
               </p>
-              <p className="text-sm text-gray-600 mb-6">
-                Click the link in the email to sign in to your account.
-                The link will expire in 15 minutes.
+              <p className="text-accent font-medium mb-6">
+                {sentToEmail}
               </p>
-              <button
-                onClick={() => setEmailSent(false)}
-                className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-              >
-                Try a different email
-              </button>
+              <p className="text-tertiary text-sm mb-8">
+                Click the link in the email to sign in. The link will expire in 15 minutes.
+              </p>
+              
+              {/* Actions */}
+              <div className="space-y-3">
+                <button
+                  onClick={() => setEmailSent(false)}
+                  className="btn btn-secondary w-full"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                  </svg>
+                  Try a different email
+                </button>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="btn btn-ghost w-full"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Refresh page
+                </button>
+              </div>
             </div>
           ) : (
             <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
+              {/* Email Input */}
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="email" className="form-label">
                   Email address
                 </label>
-                <div className="mt-1">
+                <div className="mt-1 relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg className="h-5 w-5 text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+                    </svg>
+                  </div>
                   <input
                     id="email"
                     type="email"
                     autoComplete="email"
                     required
-                    className={`appearance-none block w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm ${
-                      errors.email ? 'border-red-300' : 'border-gray-300'
+                    className={`form-control pl-10 ${
+                      errors.email ? 'border-danger' : ''
                     }`}
+                    placeholder="Enter your email address"
                     {...register('email', {
                       required: 'Email is required',
                       pattern: {
                         value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                        message: 'Invalid email address',
+                        message: 'Please enter a valid email address',
                       },
                     })}
                   />
-                  {errors.email && (
-                    <p className="mt-2 text-sm text-red-600">{errors.email.message}</p>
-                  )}
                 </div>
+                {errors.email && (
+                  <p className="form-error">{errors.email.message}</p>
+                )}
               </div>
 
+              {/* Submit Button */}
               <div>
                 <button
                   type="submit"
                   disabled={isLoading || loginMutation.isPending}
-                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn btn-primary w-full"
                 >
-                  {isLoading || loginMutation.isPending ? <LoadingSpinner size="sm" variant="accent" /> : 'Send magic link'}
+                  {isLoading || loginMutation.isPending ? (
+                    <>
+                      <LoadingSpinner size="sm" variant="accent" className="mr-2" />
+                      Sending magic link...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      Send magic link
+                    </>
+                  )}
                 </button>
               </div>
               
-              <div className="text-sm text-center">
-                <p className="text-gray-600">
+              {/* Info Text */}
+              <div className="text-center">
+                <p className="text-tertiary text-sm">
                   Don't have an account?{' '}
-                  <span className="font-medium text-primary-600 hover:text-primary-500">
+                  <span className="text-accent font-medium">
                     We'll create one for you
                   </span>
                 </p>
@@ -124,9 +184,16 @@ const LoginPage = () => {
           )}
         </div>
         
-        <div className="mt-6 text-center">
-          <Link to="/" className="text-sm font-medium text-primary-600 hover:text-primary-500">
-            ← Back to home
+        {/* Back to Home */}
+        <div className="mt-8 text-center">
+          <Link 
+            to="/" 
+            className="inline-flex items-center text-sm text-secondary hover:text-accent transition-colors"
+          >
+            <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to home
           </Link>
         </div>
       </div>

@@ -6,56 +6,47 @@ export default {
   ],
   darkMode: 'class',
   theme: {
+    container: {
+      center: true,
+      padding: "2rem",
+      screens: {
+        "2xl": "1400px",
+      },
+    },
     extend: {
       colors: {
-        // Theme-aware colors using CSS custom properties
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
         primary: {
-          50: 'var(--color-text-accent)',
-          100: 'var(--color-text-accent)',
-          200: 'var(--color-text-accent)',
-          300: 'var(--color-text-accent)',
-          400: 'var(--color-text-accent)',
-          500: 'var(--color-text-accent)',
-          600: 'var(--color-interactive-primary)',
-          700: 'var(--color-interactive-primaryHover)',
-          800: 'var(--color-interactive-primaryActive)',
-          900: 'var(--color-interactive-primaryActive)',
-          950: 'var(--color-interactive-primaryActive)',
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
         },
-        // Background colors
-        bg: {
-          primary: 'var(--color-bg-primary)',
-          secondary: 'var(--color-bg-secondary)',
-          tertiary: 'var(--color-bg-tertiary)',
-          elevated: 'var(--color-bg-elevated)',
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
         },
-        // Text colors
-        text: {
-          primary: 'var(--color-text-primary)',
-          secondary: 'var(--color-text-secondary)',
-          tertiary: 'var(--color-text-tertiary)',
-          accent: 'var(--color-text-accent)',
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
         },
-        // Border colors
-        border: {
-          primary: 'var(--color-border-primary)',
-          secondary: 'var(--color-border-secondary)',
-          accent: 'var(--color-border-accent)',
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
         },
-        // Interactive colors
-        interactive: {
-          primary: 'var(--color-interactive-primary)',
-          'primary-hover': 'var(--color-interactive-primaryHover)',
-          'primary-active': 'var(--color-interactive-primaryActive)',
-          secondary: 'var(--color-interactive-secondary)',
-          'secondary-hover': 'var(--color-interactive-secondaryHover)',
-          'secondary-active': 'var(--color-interactive-secondaryActive)',
-          danger: 'var(--color-interactive-danger)',
-          'danger-hover': 'var(--color-interactive-dangerHover)',
-          success: 'var(--color-interactive-success)',
-          'success-hover': 'var(--color-interactive-successHover)',
-          warning: 'var(--color-interactive-warning)',
-          'warning-hover': 'var(--color-interactive-warningHover)',
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
         },
       },
       fontFamily: {
@@ -84,7 +75,7 @@ export default {
         xl: 'var(--shadow-xl)',
       },
       height: {
-        'screen-minus-header': 'calc(100vh - 4rem)',
+        'screen-minus-header': 'calc(100vh - 3.5rem)',
       },
       backdropBlur: {
         xs: '2px',

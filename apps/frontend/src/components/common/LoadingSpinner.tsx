@@ -1,41 +1,18 @@
-import { cn } from '@/utils/cn';
+import { Spinner, Box } from '@chakra-ui/react'
 
 interface LoadingSpinnerProps {
-  size?: 'sm' | 'md' | 'lg' | 'xl';
-  variant?: 'primary' | 'secondary' | 'accent';
-  className?: string;
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
+  color?: string
+  className?: string
+  variant?: string // Add variant prop for compatibility
 }
 
-const LoadingSpinner = ({ 
-  size = 'md', 
-  variant = 'primary',
-  className 
-}: LoadingSpinnerProps) => {
-  const sizeClasses = {
-    sm: 'w-4 h-4',
-    md: 'w-6 h-6',
-    lg: 'w-8 h-8',
-    xl: 'w-12 h-12'
-  };
-  
-  const variantClasses = {
-    primary: 'text-primary',
-    secondary: 'text-secondary',
-    accent: 'text-accent'
-  };
-
+const LoadingSpinner = ({ size = 'md', color = 'brand.500', className }: LoadingSpinnerProps) => {
   return (
-    <div className="flex items-center justify-center">
-      <div
-        className={cn(
-          "spinner",
-          sizeClasses[size],
-          variantClasses[variant],
-          className
-        )}
-      />
-    </div>
-  );
-};
+    <Box display="flex" alignItems="center" justifyContent="center" className={className}>
+      <Spinner size={size} color={color} />
+    </Box>
+  )
+}
 
-export default LoadingSpinner;
+export default LoadingSpinner
