@@ -34,7 +34,7 @@ const DEFAULT_ZOOM = 13;
 
 export const useMapStore = create<MapStore>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       // State
       position: {
         center: DEFAULT_CENTER,

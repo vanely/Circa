@@ -4,14 +4,14 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
 import { eventService } from '@/services/eventService';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthStore } from '@/stores/authStore';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { RsvpRequest } from '@/types/event';
 
 const EventDetailPage = () => {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user } = useAuthStore();
   const [selectedRsvpStatus, setSelectedRsvpStatus] = useState<string | null>(null);
 
   // Fetch event details

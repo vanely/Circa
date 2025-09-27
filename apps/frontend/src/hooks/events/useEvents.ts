@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { eventsApi } from '@/api/events';
 import { queryKeys } from '../queryKeys';
-import { Event, EventList, EventFilters, RsvpRequest, RsvpResponse } from '@/types/event';
+import { EventFilters, RsvpRequest } from '@/types/event';
 
 // Hook to get all events with filters
 export const useEvents = (filters: EventFilters = {}) => {
@@ -32,15 +32,15 @@ export const useEventsNearby = (lat: number, lng: number, radius = 25) => {
   });
 };
 
-// Hook to get events by venue
-export const useEventsByVenue = (venueId: string) => {
-  return useQuery({
-    queryKey: queryKeys.events.byVenue(venueId),
-    queryFn: () => eventsApi.getEventsByVenue(venueId),
-    enabled: !!venueId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-};
+// // Hook to get events by venue
+// export const useEventsByVenue = (venueId: string) => {
+//   return useQuery({
+//     queryKey: queryKeys.events.byVenue(venueId),
+//     queryFn: () => eventsApi.getEventsByVenue(venueId),
+//     enabled: !!venueId,
+//     staleTime: 5 * 60 * 1000, // 5 minutes
+//   });
+// };
 
 // Hook to get events by user
 export const useEventsByUser = (userId: string) => {
@@ -106,7 +106,7 @@ export const useRsvpToEvent = () => {
   return useMutation({
     mutationFn: ({ eventId, rsvpData }: { eventId: string; rsvpData: RsvpRequest }) => 
       eventsApi.rsvpToEvent(eventId, rsvpData),
-    onSuccess: (data, variables) => {
+    onSuccess: (_, variables) => {
       // Invalidate the specific event query to refetch updated data
       queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(variables.eventId) });
       // Invalidate events list queries

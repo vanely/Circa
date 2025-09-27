@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersApi } from '@/api/users';
 import { queryKeys } from '../queryKeys';
-import { User } from '@/types/user';
 
 // Hook to get all users with filters
 export const useUsers = (filters: Record<string, any> = {}) => {

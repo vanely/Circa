@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthStore } from '@/stores/authStore';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import { eventService } from '@/services/eventService';
 
@@ -66,7 +66,7 @@ const availableCategories = [
 ];
 
 const CreateEventPage = () => {
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   

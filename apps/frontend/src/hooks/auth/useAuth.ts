@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/authStore';
 import { authApi } from '@/api/auth';
 import { queryKeys } from '../queryKeys';
-import { User } from '@/types/user';
 
 // Hook to get current user data
 export const useCurrentUser = () => {
@@ -19,7 +18,7 @@ export const useCurrentUser = () => {
 
 // Hook for login mutation
 export const useLogin = () => {
-  const { login, setLoading } = useAuthStore();
+  const { setLoading } = useAuthStore();
   
   return useMutation({
     mutationFn: (email: string) => authApi.login(email),
@@ -34,7 +33,7 @@ export const useLogin = () => {
 
 // Hook for magic link verification mutation
 export const useVerifyMagicLink = () => {
-  const { verifyMagicLink, setLoading } = useAuthStore();
+  const { setLoading } = useAuthStore();
   const queryClient = useQueryClient();
   
   return useMutation({
@@ -54,7 +53,6 @@ export const useVerifyMagicLink = () => {
 
 // Hook for logout
 export const useLogout = () => {
-  const { logout } = useAuthStore();
   const queryClient = useQueryClient();
   
   return useMutation({
@@ -68,7 +66,6 @@ export const useLogout = () => {
 
 // Hook for refreshing user data
 export const useRefreshUser = () => {
-  const { refreshUserData } = useAuthStore();
   const queryClient = useQueryClient();
   
   return useMutation({
