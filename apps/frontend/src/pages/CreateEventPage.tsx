@@ -554,7 +554,7 @@ const CreateEventPage = () => {
             >
               {createEventMutation.isPending ? (
                 <>
-                  <LoadingSpinner size="sm" color="white" className="mr-2" />
+                  <LoadingSpinner size="sm" variant="accent" className="mr-2" />
                   Creating...
                 </>
               ) : (

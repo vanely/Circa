@@ -191,7 +191,7 @@ const MapLibreMap = ({ className }: MapLibreMapProps) => {
       
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30">
-          <LoadingSpinner size="lg" color="white" />
+          <LoadingSpinner size="lg" variant="accent" />
         </div>
       )}
     </div>

@@ -1,34 +1,36 @@
 import { cn } from '@/utils/cn';
 
 interface LoadingSpinnerProps {
-  size?: 'sm' | 'md' | 'lg';
-  color?: 'primary' | 'white';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  variant?: 'primary' | 'secondary' | 'accent';
   className?: string;
 }
 
 const LoadingSpinner = ({ 
   size = 'md', 
-  color = 'primary',
+  variant = 'primary',
   className 
 }: LoadingSpinnerProps) => {
   const sizeClasses = {
-    sm: 'w-4 h-4 border-2',
-    md: 'w-6 h-6 border-2',
-    lg: 'w-10 h-10 border-3'
+    sm: 'w-4 h-4',
+    md: 'w-6 h-6',
+    lg: 'w-8 h-8',
+    xl: 'w-12 h-12'
   };
   
-  const colorClasses = {
-    primary: 'border-primary-200 border-t-primary-600',
-    white: 'border-gray-200 border-t-white'
+  const variantClasses = {
+    primary: 'text-primary',
+    secondary: 'text-secondary',
+    accent: 'text-accent'
   };
 
   return (
     <div className="flex items-center justify-center">
       <div
         className={cn(
-          "animate-spin rounded-full",
+          "spinner",
           sizeClasses[size],
-          colorClasses[color],
+          variantClasses[variant],
           className
         )}
       />
